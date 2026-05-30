@@ -135,6 +135,14 @@
             justify-content: space-between;
             align-items: center;
         }
+        .country-label {
+            display: inline;
+        }
+        .country-code-badge {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-right: 6px;
+        }
         .city-count {
             font-size: 13px;
             background: #3498db;
@@ -208,13 +216,41 @@
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
     const allCards = [];
-    const downloadData = {};
 
-    // ======= بناء نص الملف =======
-    function buildFileContent() {
+    // ======= قراءة البيانات من DOM مباشرة =======
+    // هذا يضمن أنه لو ترجم المتصفح الصفحة، تُنسخ/تُنزَّل النصوص المترجمة الفعلية
+    function readDataFromDOM() {
+        const result = {};
+        const cards = dataContainer.querySelectorAll('.country-card:not(.hidden)');
+        cards.forEach(card => {
+            // اسم الدولة: نقرأ عنصر .country-label ثم نضيف الكود من data-code
+            const labelEl = card.querySelector('.country-label');
+            const codeEl  = card.querySelector('.country-code-badge');
+            if (!labelEl) return;
+
+            const countryName = labelEl.textContent.trim();
+            const countryCode = codeEl ? codeEl.textContent.replace(/[()]/g, '').trim() : '';
+            const key = countryCode ? `${countryName} (${countryCode})` : countryName;
+
+            // المدن: نقرأ كل .city-item المرئية فقط (غير مخفية بـ display:none)
+            const citySpans = card.querySelectorAll('.city-item');
+            const cities = [];
+            citySpans.forEach(span => {
+                if (span.style.display !== 'none') {
+                    cities.push(span.textContent.trim());
+                }
+            });
+
+            result[key] = cities;
+        });
+        return result;
+    }
+
+    // ======= بناء نص الملف من البيانات المُمررة =======
+    function buildFileContent(data) {
         const lines = [];
         lines.push('const countriesAndCities = {');
-        const entries = Object.entries(downloadData);
+        const entries = Object.entries(data);
         entries.forEach(([country, cities], idx) => {
             const citiesJSON = JSON.stringify(cities);
             const comma = idx < entries.length - 1 ? ',' : '';
@@ -292,14 +328,33 @@
 
         const countryNameLower = item.name.toLowerCase();
         const citiesLower = item.cities.map(c => c.toLowerCase());
-        card.dataset.countryName = countryNameLower;
 
+        // رأس البطاقة — اسم الدولة في span منفصل والكود في span منفصل
+        // لتسهيل قراءة DOM لاحقاً سواء مُترجم أو لا
         const countryHeader = document.createElement('h3');
         countryHeader.className = 'country-name';
-        countryHeader.innerHTML = `
-            <span>${item.name} <small style="color:#7f8c8d;font-size:14px;">(${item.code})</small></span>
-            <span class="city-count">${item.cities.length} مدينة/بلدة</span>
-        `;
+
+        const leftSpan = document.createElement('span');
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'country-label';
+        labelSpan.textContent = item.name;
+
+        const codeSpan = document.createElement('small');
+        codeSpan.className = 'country-code-badge';
+        codeSpan.textContent = `(${item.code})`;
+        // الكود لا نريده أن يُترجم — نجمّده بـ translate=no
+        codeSpan.setAttribute('translate', 'no');
+
+        leftSpan.appendChild(labelSpan);
+        leftSpan.appendChild(codeSpan);
+
+        const countBadge = document.createElement('span');
+        countBadge.className = 'city-count';
+        countBadge.textContent = `${item.cities.length} مدينة/بلدة`;
+
+        countryHeader.appendChild(leftSpan);
+        countryHeader.appendChild(countBadge);
         card.appendChild(countryHeader);
 
         const citiesDiv = document.createElement('div');
@@ -327,18 +382,29 @@
             citySpans: citiesDiv.querySelectorAll('.city-item'),
             cityCount: item.cities.length
         });
-
-        const key = `${item.name} (${item.code})`;
-        downloadData[key] = item.cities;
     }
 
-    // ======= زر التنزيل =======
+    // ======= مساعد لتغيير الزر مؤقتاً ثم إعادته =======
+    function flashButton(btn, tempHTML, tempClass, durationMs) {
+        btn.classList.add(tempClass);
+        const original = btn.innerHTML;
+        btn.innerHTML = tempHTML;
+        setTimeout(() => {
+            btn.innerHTML = original;
+            btn.classList.remove(tempClass);
+        }, durationMs);
+    }
+
+    const COPY_ICON_CHECK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+    // ======= زر التنزيل — يقرأ من DOM =======
     btnDownload.addEventListener('click', function () {
-        const content = buildFileContent();
+        const liveData = readDataFromDOM();
+        const content  = buildFileContent(liveData);
         const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
         a.download = 'countries_and_cities.js';
         document.body.appendChild(a);
         a.click();
@@ -346,48 +412,36 @@
         URL.revokeObjectURL(url);
     });
 
-    // ======= زر نسخ الكل =======
+    // ======= زر نسخ الكل — يقرأ من DOM =======
     btnCopy.addEventListener('click', async function () {
-        const content = buildFileContent();
+        const liveData = readDataFromDOM();
+        const content  = buildFileContent(liveData);
+
+        const doFlash = () => flashButton(
+            btnCopy,
+            `${COPY_ICON_CHECK} تم النسخ!`,
+            'copied',
+            2500
+        );
+
         try {
             await navigator.clipboard.writeText(content);
-            // تغيير مؤقت لنص الزر للتأكيد
-            btnCopy.classList.add('copied');
-            const originalHTML = btnCopy.innerHTML;
-            btnCopy.innerHTML = `
-                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                تم النسخ!
-            `;
-            setTimeout(() => {
-                btnCopy.innerHTML = originalHTML;
-                btnCopy.classList.remove('copied');
-            }, 2500);
+            doFlash();
         } catch (err) {
-            // fallback للمتصفحات القديمة
+            // fallback للمتصفحات التي لا تدعم Clipboard API
             const ta = document.createElement('textarea');
             ta.value = content;
-            ta.style.position = 'fixed';
-            ta.style.opacity = '0';
+            ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
             document.body.appendChild(ta);
             ta.focus();
             ta.select();
-            document.execCommand('copy');
+            try { document.execCommand('copy'); } catch(e) {}
             document.body.removeChild(ta);
-
-            btnCopy.classList.add('copied');
-            const originalHTML = btnCopy.innerHTML;
-            btnCopy.innerHTML = `
-                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                تم النسخ!
-            `;
-            setTimeout(() => {
-                btnCopy.innerHTML = originalHTML;
-                btnCopy.classList.remove('copied');
-            }, 2500);
+            doFlash();
         }
     });
 
-    // ======= البحث الفوري =======
+    // ======= البحث الفوري — إخفاء/إظهار فقط =======
     function performSearch(term) {
         term = term.toLowerCase().trim();
         let visibleCount = 0;
