@@ -1,206 +1,999 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مستعرض الدول والمدن - GeoNames</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-        .container {
-            max-width: 600px;
-            margin: 40px auto;
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        h2 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 30px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #555;
-        }
-        select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 16px;
-            background-color: #fff;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        select:focus {
-            border-color: #3498db;
-        }
-        .loading {
-            display: none;
-            text-align: center;
-            color: #3498db;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-        .error-msg {
-            color: #e74c3c;
-            background: #fadbd8;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            display: none;
-            text-align: center;
-            font-size: 14px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>مستكشف الدول والمدن</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+
+  <style>
+    :root {
+      --bg: #050a14;
+      --surface: #0d1b2a;
+      --card: #111e2e;
+      --border: #1e3a52;
+      --accent: #00d4ff;
+      --accent2: #ff6b35;
+      --accent3: #7b61ff;
+      --text: #e8f4f8;
+      --muted: #6b8fa8;
+      --glow: 0 0 20px rgba(0,212,255,0.3);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Cairo', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      z-index: 0;
+      animation: gridPan 30s linear infinite;
+    }
+
+    @keyframes gridPan {
+      0% { transform: translate(0,0); }
+      100% { transform: translate(60px, 60px); }
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: -200px; left: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(0,212,255,0.08) 0%, transparent 70%);
+      border-radius: 50%;
+      z-index: 0;
+      animation: floatOrb 15s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatOrb {
+      0% { transform: translate(0,0); }
+      100% { transform: translate(300px, 200px); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px 60px;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      padding: 60px 0 40px;
+      position: relative;
+    }
+
+    .header-tag {
+      display: inline-block;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      border: 1px solid rgba(0,212,255,0.3);
+      padding: 6px 20px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      animation: fadeDown 0.6s ease;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-weight: 900;
+      line-height: 1.1;
+      animation: fadeDown 0.7s ease;
+    }
+
+    h1 span.highlight {
+      background: linear-gradient(135deg, var(--accent), var(--accent3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header-sub {
+      color: var(--muted);
+      font-size: 1rem;
+      margin-top: 12px;
+      animation: fadeDown 0.8s ease;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      margin-top: 30px;
+      flex-wrap: wrap;
+      animation: fadeDown 0.9s ease;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-num {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      font-family: 'Space Mono', monospace;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Controls */
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 32px;
+      animation: fadeUp 0.8s ease 0.3s both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .search-box {
+      grid-column: 1 / -1;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Cairo', sans-serif;
+      font-size: 1rem;
+      padding: 16px 20px 16px 52px;
+      border-radius: 12px;
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .search-box input:focus {
+      border-color: var(--accent);
+      box-shadow: var(--glow);
+    }
+
+    .search-box input::placeholder { color: var(--muted); }
+
+    .search-icon {
+      position: absolute;
+      left: 18px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 1.2rem;
+      pointer-events: none;
+    }
+
+    select {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Cairo', sans-serif;
+      font-size: 0.95rem;
+      padding: 14px 18px;
+      border-radius: 12px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.3s;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b8fa8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: left 14px center;
+    }
+
+    select:focus { border-color: var(--accent); }
+    select option { background: var(--card); }
+
+    /* View modes */
+    .view-toggle {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-start;
+      margin-bottom: 24px;
+      animation: fadeUp 0.8s ease 0.4s both;
+    }
+
+    .view-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'Cairo', sans-serif;
+      font-size: 0.85rem;
+      padding: 8px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+
+    .view-btn.active {
+      background: rgba(0,212,255,0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Country Cards Grid */
+    #countries-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      animation: fadeUp 0.8s ease 0.5s both;
+    }
+
+    #countries-grid.list-view {
+      grid-template-columns: 1fr;
+    }
+
+    .country-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+      position: relative;
+    }
+
+    .country-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent3));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .country-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(0,212,255,0.4);
+      box-shadow: 0 8px 32px rgba(0,212,255,0.1);
+    }
+
+    .country-card:hover::before { opacity: 1; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .flag-emoji {
+      font-size: 2.4rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .country-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      flex: 1;
+    }
+
+    .country-code {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      background: rgba(255,255,255,0.05);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .card-meta {
+      padding: 14px 20px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .meta-icon { font-size: 0.9rem; }
+
+    .cities-section {
+      display: none;
+      padding: 0 20px 20px;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+
+    .cities-section.open { display: block; }
+
+    .cities-header {
+      font-size: 0.8rem;
+      color: var(--accent);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 14px 0 10px;
+      font-weight: 600;
+    }
+
+    .states-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 360px;
+      overflow-y: auto;
+      padding-left: 4px;
+    }
+
+    .states-list::-webkit-scrollbar { width: 4px; }
+    .states-list::-webkit-scrollbar-track { background: transparent; }
+    .states-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .state-block { }
+
+    .state-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent2);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .state-name::before {
+      content: '▸';
+      font-size: 0.7rem;
+    }
+
+    .cities-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .city-tag {
+      background: rgba(123,97,255,0.12);
+      border: 1px solid rgba(123,97,255,0.25);
+      color: #b8a8ff;
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      transition: background 0.2s;
+    }
+
+    .city-tag:hover {
+      background: rgba(123,97,255,0.25);
+    }
+
+    .expand-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px 20px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: 'Cairo', sans-serif;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: color 0.2s;
+      border-top: 1px solid var(--border);
+      margin-top: 2px;
+    }
+
+    .expand-btn:hover { color: var(--accent); }
+
+    .expand-icon {
+      transition: transform 0.3s;
+      font-size: 0.7rem;
+    }
+
+    .expand-icon.rotated { transform: rotate(180deg); }
+
+    /* Continent filter pills */
+    .continent-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+      animation: fadeUp 0.8s ease 0.35s both;
+    }
+
+    .pill {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'Cairo', sans-serif;
+      font-size: 0.8rem;
+      padding: 6px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.25s;
+      white-space: nowrap;
+    }
+
+    .pill.active {
+      background: rgba(255,107,53,0.15);
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    /* No results */
+    .no-results {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--muted);
+    }
+
+    .no-results-icon { font-size: 3rem; margin-bottom: 16px; }
+
+    /* Loader */
+    .loader {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 80px;
+      gap: 12px;
+    }
+
+    .dot {
+      width: 10px; height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+
+    .dot:nth-child(2) { animation-delay: 0.2s; background: var(--accent3); }
+    .dot:nth-child(3) { animation-delay: 0.4s; background: var(--accent2); }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Modal for full country detail */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5,10,20,0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 700px;
+      max-height: 85vh;
+      overflow-y: auto;
+      transform: scale(0.95);
+      transition: transform 0.3s;
+    }
+
+    .modal-overlay.open .modal { transform: scale(1); }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 28px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 1;
+    }
+
+    .modal-flag { font-size: 3rem; }
+
+    .modal-title { font-size: 1.5rem; font-weight: 700; }
+
+    .modal-subtitle { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+
+    .modal-close {
+      margin-right: auto;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 1.1rem;
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .modal-close:hover { border-color: var(--accent2); color: var(--accent2); }
+
+    .modal-body { padding: 24px 28px; }
+
+    .modal-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .info-chip {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+
+    .info-chip-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .info-chip-value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .modal-states { }
+
+    .modal-state-item {
+      margin-bottom: 18px;
+    }
+
+    .modal-state-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--accent2);
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255,107,53,0.15);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .controls { grid-template-columns: 1fr; }
+      .search-box { grid-column: 1; }
+      #countries-grid { grid-template-columns: 1fr; }
+      .modal-info-grid { grid-template-columns: 1fr; }
+    }
+
+    /* count badge */
+    .count-badge {
+      display: inline-block;
+      background: rgba(0,212,255,0.15);
+      border: 1px solid rgba(0,212,255,0.3);
+      color: var(--accent);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-right: 8px;
+    }
+  </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>استعراض الدول والمدن (GeoNames)</h2>
-    
-    <div class="error-msg" id="errorMessage"></div>
 
-    <div class="form-group">
-        <label for="countrySelect">اختر الدولة:</label>
-        <select id="countrySelect">
-            <option value="">-- جاري تحميل الدول... --</option>
-        </select>
+  <header>
+    <div class="header-tag">🌍 Country State City Library</div>
+    <h1>مستكشف <span class="highlight">الدول والمدن</span></h1>
+    <p class="header-sub">بيانات شاملة لجميع دول العالم — مجاني 100% بدون API</p>
+    <div class="stats-bar">
+      <div class="stat">
+        <span class="stat-num" id="total-countries">—</span>
+        <span class="stat-label">دولة</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="total-states">—</span>
+        <span class="stat-label">ولاية / منطقة</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="total-cities">—</span>
+        <span class="stat-label">مدينة</span>
+      </div>
     </div>
+  </header>
 
-    <div class="form-group">
-        <label for="citySelect">اختر المدينة:</label>
-        <select id="citySelect" disabled>
-            <option value="">-- اختر الدولة أولاً --</option>
-        </select>
+  <!-- Controls -->
+  <div class="controls">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="ابحث عن دولة أو مدينة..."/>
     </div>
+    <select id="region-filter">
+      <option value="">كل المناطق</option>
+    </select>
+    <select id="sort-select">
+      <option value="name">ترتيب أبجدي</option>
+      <option value="cities-desc">الأكثر مدنًا</option>
+      <option value="cities-asc">الأقل مدنًا</option>
+    </select>
+  </div>
 
-    <div class="loading" id="loadingText">جاري تحميل البيانات...</div>
+  <!-- Continent Pills -->
+  <div class="continent-pills" id="continent-pills"></div>
+
+  <!-- View toggle -->
+  <div class="view-toggle">
+    <button class="view-btn active" id="btn-grid" onclick="setView('grid')">⊞ شبكة</button>
+    <button class="view-btn" id="btn-list" onclick="setView('list')">☰ قائمة</button>
+  </div>
+
+  <!-- Grid -->
+  <div id="countries-grid">
+    <div class="loader" style="grid-column:1/-1">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+  </div>
+
 </div>
 
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOnOverlay(event)">
+  <div class="modal" id="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-flag" id="modal-flag">🌐</div>
+      </div>
+      <div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-subtitle" id="modal-subtitle"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-info-grid" id="modal-info"></div>
+      <div class="modal-states" id="modal-states"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CDN: Country State City -->
+<script src="https://cdn.jsdelivr.net/npm/country-state-city@3.2.1/dist/index.min.js"></script>
+
 <script>
-    // ⚠️ استبدل 'YOUR_USERNAME' باسم المستخدم الخاص بك بعد تفعيل الـ Cloud Services في حسابك
-    const GEONAMES_USERNAME = 'YOUR_USERNAME'; 
+  const { Country, State, City } = window.csc;
 
-    const countrySelect = document.getElementById('countrySelect');
-    const citySelect = document.getElementById('citySelect');
-    const loadingText = document.getElementById('loadingText');
-    const errorMessage = document.getElementById('errorMessage');
+  let allCountries = [];
+  let currentFilter = '';
+  let currentContinent = '';
+  let currentSort = 'name';
+  let currentView = 'grid';
 
-    function showError(message) {
-        errorMessage.textContent = message;
-        errorMessage.style.display = 'block';
-    }
+  const CONTINENT_MAP = {
+    'AF': 'أفريقيا', 'AN': 'القطب الجنوبي', 'AS': 'آسيا',
+    'EU': 'أوروبا', 'NA': 'أمريكا الشمالية', 'OC': 'أوقيانوسيا',
+    'SA': 'أمريكا الجنوبية'
+  };
 
-    function clearError() {
-        errorMessage.textContent = '';
-        errorMessage.style.display = 'none';
-    }
+  function flagEmoji(code) {
+    if (!code || code.length !== 2) return '🌐';
+    return [...code.toUpperCase()].map(c =>
+      String.fromCodePoint(c.codePointAt(0) + 127397)
+    ).join('');
+  }
 
-    // 1. تحميل قائمة جميع الدول عند فتح الصفحة
-    async function loadCountries() {
-        clearError();
-        try {
-            const response = await fetch(`https://secure.geonames.org/countryInfoJSON?username=${GEONAMES_USERNAME}`);
-            
-            if (!response.ok) {
-                throw new Error("فشل الاتصال بالسيرفر");
-            }
-            
-            const data = await response.json();
-            
-            // التحقق مما إذا كان GeoNames قد أرجع رسالة خطأ (مثل استهلاك الحد الأقصى أو اسم مستخدم خاطئ)
-            if (data.status && data.status.value) {
-                throw new Error(data.status.message);
-            }
+  function countCitiesForCountry(isoCode) {
+    return City.getCitiesOfCountry(isoCode)?.length || 0;
+  }
 
-            if (!data.geonames) {
-                throw new Error("بيانات الدول غير موجودة");
-            }
+  function init() {
+    const raw = Country.getAllCountries();
+    allCountries = raw.map(c => ({
+      ...c,
+      flag: flagEmoji(c.isoCode),
+      cityCount: countCitiesForCountry(c.isoCode),
+      stateCount: (State.getStatesOfCountry(c.isoCode) || []).length
+    }));
 
-            // ترتيب الدول أبجدياً
-            const countries = data.geonames.sort((a, b) => a.countryName.localeCompare(b.countryName));
+    // Stats
+    const totalCities = allCountries.reduce((s, c) => s + c.cityCount, 0);
+    const totalStates = allCountries.reduce((s, c) => s + c.stateCount, 0);
 
-            countrySelect.innerHTML = '<option value="">-- اختر دولة --</option>';
-            countries.forEach(country => {
-                const option = document.createElement('option');
-                option.value = country.countryCode; 
-                option.textContent = country.countryName; 
-                countrySelect.appendChild(option);
-            });
-        } catch (error) {
-            console.error('حدث خطأ:', error);
-            showError(`خطأ: ${error.message}. تأكد من وضع اسم مستخدم صحيح وتفعيل الـ Cloud Services وتشغيل الملف عبر سيرفر محلي (Live Server).`);
-            countrySelect.innerHTML = '<option value="">فشل تحميل الدول</option>';
-        }
-    }
+    animateNum('total-countries', allCountries.length);
+    animateNum('total-states', totalStates);
+    animateNum('total-cities', totalCities);
 
-    // 2. تحميل المدن التابعة للدولة المختارة
-    async function loadCities(countryCode) {
-        if (!countryCode) {
-            citySelect.innerHTML = '<option value="">-- اختر الدولة أولاً --</option>';
-            citySelect.disabled = true;
-            return;
-        }
-
-        citySelect.disabled = true;
-        citySelect.innerHTML = '<option value="">جاري تحميل المدن...</option>';
-        loadingText.style.display = 'block';
-        clearError();
-
-        try {
-            // جلب المدن (P تعني الأماكن المأهولة بالسكان) بحد أقصى 1000 مدينة لتجنب البطء
-            const response = await fetch(`https://secure.geonames.org/searchJSON?country=${countryCode}&featureClass=P&maxRows=1000&username=${GEONAMES_USERNAME}`);
-            const data = await response.json();
-
-            if (data.status && data.status.value) {
-                throw new Error(data.status.message);
-            }
-
-            if (data.geonames && data.geonames.length > 0) {
-                // ترتيب المدن أبجدياً
-                const cities = data.geonames.sort((a, b) => a.name.localeCompare(b.name));
-
-                citySelect.innerHTML = '<option value="">-- اختر مدينة --</option>';
-                cities.forEach(city => {
-                    const option = document.createElement('option');
-                    option.value = city.geonameId;
-                    option.textContent = city.name;
-                    citySelect.appendChild(option);
-                });
-                citySelect.disabled = false;
-            } else {
-                citySelect.innerHTML = '<option value="">لا توجد مدن متاحة لهذه الدولة</option>';
-            }
-        } catch (error) {
-            console.error('حدث خطأ أثناء تحميل المدن:', error);
-            showError(`خطأ أثناء تحميل المدن: ${error.message}`);
-            citySelect.innerHTML = '<option value="">خطأ في تحميل المدن</option>';
-        } finally {
-            loadingText.style.display = 'none';
-        }
-    }
-
-    // مراقبة تغيير الاختيار في قائمة الدول
-    countrySelect.addEventListener('change', (e) => {
-        loadCities(e.target.value);
+    // Region filter
+    const regions = [...new Set(allCountries.map(c => c.region).filter(Boolean))].sort();
+    const regionSel = document.getElementById('region-filter');
+    regions.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r; opt.textContent = r;
+      regionSel.appendChild(opt);
     });
 
-    // تشغيل الدالة عند تحميل الصفحة لبدء جلب الدول
-    window.onload = loadCountries;
-</script>
+    // Continent pills
+    buildContinentPills();
 
+    renderGrid();
+  }
+
+  function animateNum(id, target) {
+    const el = document.getElementById(id);
+    let cur = 0;
+    const step = Math.ceil(target / 60);
+    const iv = setInterval(() => {
+      cur = Math.min(cur + step, target);
+      el.textContent = cur.toLocaleString('ar');
+      if (cur >= target) clearInterval(iv);
+    }, 20);
+  }
+
+  function buildContinentPills() {
+    const continents = [...new Set(allCountries.map(c => c.subregion?.split(' ')[0]).filter(Boolean))];
+    // Better: use region
+    const regions = [...new Set(allCountries.map(c => c.region).filter(Boolean))].sort();
+    const container = document.getElementById('continent-pills');
+
+    const allPill = document.createElement('button');
+    allPill.className = 'pill active';
+    allPill.textContent = '🌍 الكل';
+    allPill.onclick = () => filterByContinent('', allPill);
+    container.appendChild(allPill);
+
+    regions.forEach(r => {
+      const pill = document.createElement('button');
+      pill.className = 'pill';
+      const icons = { 'Africa': '🌍', 'Americas': '🌎', 'Asia': '🌏', 'Europe': '🇪🇺', 'Oceania': '🏝️', 'Antarctic': '🧊', 'Polar': '🧊' };
+      const icon = icons[r] || '🌐';
+      pill.textContent = `${icon} ${r}`;
+      pill.onclick = () => filterByContinent(r, pill);
+      container.appendChild(pill);
+    });
+  }
+
+  function filterByContinent(region, btn) {
+    currentContinent = region;
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    renderGrid();
+  }
+
+  function setView(v) {
+    currentView = v;
+    const grid = document.getElementById('countries-grid');
+    document.getElementById('btn-grid').classList.toggle('active', v === 'grid');
+    document.getElementById('btn-list').classList.toggle('active', v === 'list');
+    grid.classList.toggle('list-view', v === 'list');
+  }
+
+  function getFiltered() {
+    let list = [...allCountries];
+
+    if (currentContinent)
+      list = list.filter(c => c.region === currentContinent);
+
+    if (currentFilter)
+      list = list.filter(c =>
+        c.name.toLowerCase().includes(currentFilter) ||
+        c.isoCode.toLowerCase().includes(currentFilter)
+      );
+
+    const regionVal = document.getElementById('region-filter').value;
+    if (regionVal) list = list.filter(c => c.region === regionVal);
+
+    if (currentSort === 'name') list.sort((a,b) => a.name.localeCompare(b.name));
+    else if (currentSort === 'cities-desc') list.sort((a,b) => b.cityCount - a.cityCount);
+    else if (currentSort === 'cities-asc') list.sort((a,b) => a.cityCount - b.cityCount);
+
+    return list;
+  }
+
+  function renderGrid() {
+    const grid = document.getElementById('countries-grid');
+    const list = getFiltered();
+    grid.innerHTML = '';
+
+    if (!list.length) {
+      grid.innerHTML = `<div class="no-results"><div class="no-results-icon">🔍</div><p>لا توجد نتائج</p></div>`;
+      return;
+    }
+
+    list.forEach((country, i) => {
+      const card = buildCard(country, i);
+      grid.appendChild(card);
+    });
+  }
+
+  function buildCard(country, idx) {
+    const card = document.createElement('div');
+    card.className = 'country-card';
+    card.style.animationDelay = `${Math.min(idx * 0.03, 1)}s`;
+
+    const states = State.getStatesOfCountry(country.isoCode) || [];
+    const cityCount = country.cityCount;
+
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="flag-emoji">${country.flag}</div>
+        <div class="country-name">${country.name}</div>
+        <span class="country-code">${country.isoCode}</span>
+      </div>
+      <div class="card-meta">
+        <span class="meta-item"><span class="meta-icon">🗺️</span>${country.region || '—'}</span>
+        <span class="meta-item"><span class="meta-icon">🏛️</span>${states.length} منطقة</span>
+        <span class="meta-item"><span class="meta-icon">🏙️</span>${cityCount.toLocaleString('ar')} مدينة</span>
+        ${country.phonecode ? `<span class="meta-item"><span class="meta-icon">📞</span>+${country.phonecode}</span>` : ''}
+        ${country.currency ? `<span class="meta-item"><span class="meta-icon">💱</span>${country.currency}</span>` : ''}
+      </div>
+      ${states.length > 0 ? `
+      <button class="expand-btn" onclick="toggleExpand(this, '${country.isoCode}')">
+        <span class="expand-icon">▼</span> عرض المناطق والمدن
+      </button>
+      <div class="cities-section">
+        <div class="cities-header">المناطق والمدن</div>
+        <div class="states-list" id="states-${country.isoCode}"></div>
+      </div>` : ''}
+    `;
+
+    card.addEventListener('dblclick', () => openModal(country));
+    return card;
+  }
+
+  function toggleExpand(btn, isoCode) {
+    const section = btn.nextElementSibling;
+    const icon = btn.querySelector('.expand-icon');
+    const isOpen = section.classList.toggle('open');
+    icon.classList.toggle('rotated', isOpen);
+    btn.querySelector('span:last-child').textContent = isOpen ? ' إخفاء المناطق' : ' عرض المناطق والمدن';
+
+    if (isOpen) {
+      const container = document.getElementById(`states-${isoCode}`);
+      if (!container.hasChildNodes()) {
+        loadStates(container, isoCode);
+      }
+    }
+  }
+
+  function loadStates(container, isoCode) {
+    const states = State.getStatesOfCountry(isoCode) || [];
+    states.forEach(state => {
+      const cities = City.getCitiesOfState(isoCode, state.isoCode) || [];
+      const block = document.createElement('div');
+      block.className = 'state-block';
+
+      const stateName = document.createElement('div');
+      stateName.className = 'state-name';
+      stateName.innerHTML = `${state.name} <span class="count-badge">${cities.length}</span>`;
+      block.appendChild(stateName);
+
+      if (cities.length) {
+        const tags = document.createElement('div');
+        tags.className = 'cities-tags';
+        cities.slice(0, 30).forEach(city => {
+          const tag = document.createElement('span');
+          tag.className = 'city-tag';
+          tag.textContent = city.name;
+          tags.appendChild(tag);
+        });
+        if (cities.length > 30) {
+          const more = document.createElement('span');
+          more.className = 'city-tag';
+          more.style.opacity = '0.5';
+          more.textContent = `+${cities.length - 30} أخرى`;
+          tags.appendChild(more);
+        }
+        block.appendChild(tags);
+      }
+      container.appendChild(block);
+    });
+  }
+
+  function openModal(country) {
+    const states = State.getStatesOfCountry(country.isoCode) || [];
+    const cities = City.getCitiesOfCountry(country.isoCode) || [];
+
+    document.getElementById('modal-flag').textContent = country.flag;
+    document.getElementById('modal-title').textContent = country.name;
+    document.getElementById('modal-subtitle').textContent = `${country.region} — ${country.subregion || ''}`;
+
+    const info = document.getElementById('modal-info');
+    info.innerHTML = [
+      ['🔤 الكود', country.isoCode],
+      ['📞 الاتصال', `+${country.phonecode || '—'}`],
+      ['💱 العملة', `${country.currency || '—'} (${country.currencySymbol || ''})`],
+      ['🌐 TLD', country.tld || '—'],
+      ['🏛️ عدد المناطق', states.length.toLocaleString('ar')],
+      ['🏙️ عدد المدن', cities.length.toLocaleString('ar')]
+    ].map(([l, v]) => `<div class="info-chip"><div class="info-chip-label">${l}</div><div class="info-chip-value">${v}</div></div>`).join('');
+
+    const statesContainer = document.getElementById('modal-states');
+    statesContainer.innerHTML = `<div class="cities-header">المناطق والمدن</div>`;
+    states.slice(0, 20).forEach(state => {
+      const stateCities = City.getCitiesOfState(country.isoCode, state.isoCode) || [];
+      const item = document.createElement('div');
+      item.className = 'modal-state-item';
+      item.innerHTML = `
+        <div class="modal-state-name">${state.name} <span class="count-badge">${stateCities.length}</span></div>
+        <div class="cities-tags">${stateCities.slice(0,20).map(c => `<span class="city-tag">${c.name}</span>`).join('')}${stateCities.length > 20 ? `<span class="city-tag" style="opacity:0.5">+${stateCities.length-20}</span>` : ''}</div>
+      `;
+      statesContainer.appendChild(item);
+    });
+    if (states.length > 20) {
+      statesContainer.innerHTML += `<p style="color:var(--muted);font-size:0.8rem;margin-top:12px;text-align:center">... و ${states.length - 20} منطقة أخرى</p>`;
+    }
+
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+
+  function closeModalOnOverlay(e) {
+    if (e.target.id === 'modal-overlay') closeModal();
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  document.getElementById('search-input').addEventListener('input', e => {
+    currentFilter = e.target.value.trim().toLowerCase();
+    renderGrid();
+  });
+
+  document.getElementById('region-filter').addEventListener('change', () => renderGrid());
+  document.getElementById('sort-select').addEventListener('change', e => {
+    currentSort = e.target.value;
+    renderGrid();
+  });
+
+  // Init
+  window.addEventListener('load', () => {
+    setTimeout(init, 100);
+  });
+</script>
 </body>
 </html>
