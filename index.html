@@ -1,66 +1,126 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>تنزيل الدول والمدن</title>
+<title>الدول والمدن - GeoNames</title>
+
 <style>
-body{
-    font-family:Tahoma;
-    text-align:center;
-    padding:50px;
+body {
+    font-family: Arial;
+    direction: rtl;
+    background: #f4f4f4;
+    padding: 20px;
 }
-button{
-    padding:15px 30px;
-    font-size:18px;
-    cursor:pointer;
+
+button {
+    padding: 10px 15px;
+    margin: 10px 0;
+    cursor: pointer;
+}
+
+select {
+    width: 300px;
+    padding: 8px;
+    margin: 10px 0;
+}
+
+.box {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
 }
 </style>
 </head>
+
 <body>
 
-<button id="downloadBtn">تنزيل ملف الدول والمدن</button>
+<h2>🌍 الدول والمدن عبر GeoNames (بدون API)</h2>
 
-<script type="module">
+<button onclick="loadData()">تحميل البيانات</button>
 
-import cities from "https://cdn.jsdelivr.net/npm/all-the-cities@3.1.0/dist/all-the-cities.mjs";
+<div class="box">
+    <label>الدول:</label><br>
+    <select id="countries" onchange="loadCities()"></select>
 
-document.getElementById("downloadBtn").onclick = () => {
+    <br><br>
 
-    const countriesAndCities = {};
+    <label>المدن:</label><br>
+    <select id="cities"></select>
+</div>
 
-    cities.forEach(city => {
+<!-- JSZip -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-        const country = city.country;
+<script>
+let countryMap = {};   // code => name
+let cityMap = {};      // countryCode => cities array
 
-        if (!countriesAndCities[country]) {
-            countriesAndCities[country] = [];
-        }
+// تحميل الدول + المدن
+async function loadData() {
 
-        if (!countriesAndCities[country].includes(city.name)) {
-            countriesAndCities[country].push(city.name);
-        }
+    // 1. تحميل الدول
+    const countriesRes = await fetch("https://download.geonames.org/export/dump/countryInfo.txt");
+    const countriesText = await countriesRes.text();
 
+    countriesText.split("\n").forEach(line => {
+        if (line.startsWith("#") || !line.trim()) return;
+
+        const parts = line.split("\t");
+        const code = parts[0];
+        const name = parts[4];
+
+        countryMap[code] = name;
     });
 
-    const content =
-`const countriesAndCities = ${JSON.stringify(countriesAndCities, null, 4)};`;
+    const countriesSelect = document.getElementById("countries");
+    countriesSelect.innerHTML = "";
 
-    const blob = new Blob(
-        [content],
-        { type: "application/javascript" }
-    );
+    Object.entries(countryMap).forEach(([code, name]) => {
+        const opt = document.createElement("option");
+        opt.value = code;
+        opt.textContent = name;
+        countriesSelect.appendChild(opt);
+    });
 
-    const url = URL.createObjectURL(blob);
+    // 2. تحميل المدن (ZIP)
+    const zipRes = await fetch("https://download.geonames.org/export/dump/cities15000.zip");
+    const zipData = await zipRes.arrayBuffer();
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "countries-and-cities.js";
-    a.click();
+    const zip = await JSZip.loadAsync(zipData);
+    const fileName = Object.keys(zip.files)[0];
+    const text = await zip.files[fileName].async("string");
 
-    URL.revokeObjectURL(url);
+    text.split("\n").forEach(line => {
+        if (!line.trim()) return;
 
-};
+        const parts = line.split("\t");
 
+        const city = parts[1];
+        const countryCode = parts[8];
+
+        if (!cityMap[countryCode]) {
+            cityMap[countryCode] = [];
+        }
+
+        cityMap[countryCode].push(city);
+    });
+
+    alert("تم تحميل الدول والمدن بنجاح ✅");
+}
+
+// عند اختيار دولة
+function loadCities() {
+    const code = document.getElementById("countries").value;
+    const citiesSelect = document.getElementById("cities");
+
+    citiesSelect.innerHTML = "";
+
+    (cityMap[code] || []).forEach(city => {
+        const opt = document.createElement("option");
+        opt.textContent = city;
+        citiesSelect.appendChild(opt);
+    });
+}
 </script>
 
 </body>
