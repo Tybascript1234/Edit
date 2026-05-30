@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تنزيل الدول والمدن</title>
+<style>
+body{
+    font-family:Tahoma;
+    text-align:center;
+    padding:50px;
+}
+button{
+    padding:15px 30px;
+    font-size:18px;
+    cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<button id="downloadBtn">تنزيل ملف الدول والمدن</button>
+
+<script type="module">
+
+import cities from "https://cdn.jsdelivr.net/npm/all-the-cities@3.1.0/dist/all-the-cities.mjs";
+
+document.getElementById("downloadBtn").onclick = () => {
+
+    const countriesAndCities = {};
+
+    cities.forEach(city => {
+
+        const country = city.country;
+
+        if (!countriesAndCities[country]) {
+            countriesAndCities[country] = [];
+        }
+
+        if (!countriesAndCities[country].includes(city.name)) {
+            countriesAndCities[country].push(city.name);
+        }
+
+    });
+
+    const content =
+`const countriesAndCities = ${JSON.stringify(countriesAndCities, null, 4)};`;
+
+    const blob = new Blob(
+        [content],
+        { type: "application/javascript" }
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "countries-and-cities.js";
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+};
+
+</script>
+
+</body>
+</html>
