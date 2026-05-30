@@ -145,7 +145,7 @@
     // دالة مساعدة لعمل تأخير زمني مخصص (بالملي ثانية)
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-    // 1. الدالة الأساسية لجلب الدول وبدء التحميل التتابعي للمدن
+    // 1. الدالة الأساسية لجلب الدول وبدء التحميل التتابعي للمدن على مجموعات (30 دولة لكل دفعة)
     async function loadGeoNamesDatabase() {
         try {
             // جلب قائمة كافة الدول من GeoNames
@@ -166,8 +166,9 @@
             searchBar.placeholder = "اكتب كلمة البحث واضغط Enter للبحث...";
 
             let count = 0;
+            let currentChunk = [];
 
-            // حلقة تكرارية تقوم بتحميل دولة تلو الأخرى بالتتابع
+            // حلقة تكرارية تقوم بتحميل مدن الدول بالتتابع
             for (const country of countries) {
                 count++;
                 statusMessage.textContent = `جاري جلب مدن: ${country.countryName} (${count} من أصل ${countries.length})...`;
@@ -194,16 +195,33 @@
 
                     // إضافتها إلى مصفوفة البيانات الكلية المخصصة للبحث
                     structuredWorldData.push(countryObj);
+                    
+                    // إضافتها إلى الدفعة الحالية ليتم حقنها في الصفحة
+                    currentChunk.push(countryObj);
 
-                    // تحديث واجهة المستخدم فوراً لتعرض البطاقة الجديدة في نفس اللحظة
-                    appendCountryCard(countryObj);
+                    // عندما تصل الدفعة الحالية إلى 30 دولة أو نصل إلى نهاية المصفوفة
+                    if (currentChunk.length === 30 || count === countries.length) {
+                        // حقن الـ 30 دولة دفعة واحدة في الصفحة
+                        currentChunk.forEach(item => appendCountryCard(item));
+                        // تصفير المصفوفة المؤقتة لاستقبال الدفعة التالية
+                        currentChunk = [];
+                        // الفاصل الزمني المطلوب بين كل دفعة (30 دولة) والدفعة التالية: 1 مللي ثانية
+                        await delay(1);
+                    }
 
                 } catch (err) {
                     console.error(`خطأ في جلب مدن ${country.countryName}:`, err);
+                    
+                    // في حال الفشل، نضمن بناء كائن فارغ للمدن حتى لا يحدث خلل بالعد
+                    const failedCountryObj = { name: country.countryName, native: country.countryName, code: country.countryCode, cities: [] };
+                    structuredWorldData.push(failedCountryObj);
+                    currentChunk.push(failedCountryObj);
+                    if (currentChunk.length === 30 || count === countries.length) {
+                        currentChunk.forEach(item => appendCountryCard(item));
+                        currentChunk = [];
+                        await delay(1);
+                    }
                 }
-
-                // الفاصل الزمني المطلوب: انتظر 1 مللي ثانية قبل الانتقال للدولة التالية
-                await delay(1);
             }
 
             // عند اكتمال تحميل كافة دول ومدن العالم بالكامل
@@ -253,7 +271,7 @@
         dataContainer.appendChild(card);
     }
 
-    // 2. دالة العرض التتابعي المعدلة (تأخذ المصفوفة وتعرض 30 دولة ثم تنتظر 1 مللي ثانية وهكذا)
+    // 2. دالة العرض التتابعي عند مسح النص (تأخذ المصفوفة وتعرض 10 دول ثم تنتظر 1 مللي ثانية وهكذا)
     async function renderDataChunked(data) {
         dataContainer.innerHTML = '';
         
@@ -270,15 +288,15 @@
             // التحقق من أن المستخدم لم يقم بعملية بحث جديدة أثناء عمل الدالة
             if (token !== currentRenderToken) return;
 
-            // استخراج 30 دولة من المصفوفة وحقنها دفعة واحدة
-            const chunk = data.slice(index, index + 30);
+            // استخراج 10 دول من المصفوفة وحقنها
+            const chunk = data.slice(index, index + 10);
             chunk.forEach(item => {
                 appendCountryCard(item);
             });
 
-            index += 30;
+            index += 10;
 
-            // الانتظار لمدة 1 مللي ثانية بين كل 30 دولة و 30 دولة أخرى
+            // الانتظار لمدة 1 مللي ثانية بين كل 10 دول و 10 دول أخرى
             await delay(1);
         }
     }
@@ -302,7 +320,7 @@
             const searchTerm = searchBar.value.toLowerCase().trim();
 
             if (!searchTerm) {
-                // إذا ضغط إنتر والحقل فارغ، يعيد فك كل البيانات تتابعياً بمعدل 30 دولة
+                // إذا ضغط إنتر والحقل فارغ، يعيد فك كل البيانات تتابعياً
                 renderDataChunked(structuredWorldData);
                 return;
             }
@@ -328,7 +346,7 @@
     // مراقبة مسح النص بالكامل (لو قام المستخدم بمسح النص بـ Backspace أو زر X)
     searchBar.addEventListener('input', function(e) {
         if (e.target.value.trim() === "") {
-            // عند إزالة النص كله بالكامل تعود كل النتائج بنظام (30 دولة ثم 1 مللي ثانية ثم 30 دولة)
+            // عند إزالة النص كله بالكامل تعود كل النتائج بنظام (10 دول ثم 1 مللي ثانية ثم 10 دول)
             renderDataChunked(structuredWorldData);
         }
     });
