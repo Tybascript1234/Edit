@@ -25,6 +25,11 @@ body {
     color: #444;
     font-size: 14px;
 }
+
+.error {
+    color: red;
+    font-weight: bold;
+}
 </style>
 </head>
 
@@ -35,20 +40,53 @@ body {
 
 <script>
 
-const username = "myeo";
+let username = "myeo";
+
+// لو فشل حسابك استخدم demo تلقائيًا
+const fallbackUser = "demo";
+
+// تأخير بسيط لتجنب قطع الاتصال
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 // جلب الدول
 async function getCountries() {
-    const res = await fetch(`https://api.geonames.org/countryInfoJSON?username=${username}`);
-    const data = await res.json();
-    return data.geonames;
+    try {
+        let res = await fetch(`https://api.geonames.org/countryInfoJSON?username=${username}`);
+        
+        if (!res.ok) throw new Error("Primary failed");
+
+        let data = await res.json();
+
+        if (!data.geonames) throw new Error("No data");
+
+        return data.geonames;
+
+    } catch (err) {
+        console.warn("Switching to demo account...");
+
+        let res = await fetch(`https://api.geonames.org/countryInfoJSON?username=${fallbackUser}`);
+        let data = await res.json();
+
+        return data.geonames || [];
+    }
 }
 
 // جلب مدن الدولة
 async function getCities(countryCode) {
-    const res = await fetch(`https://api.geonames.org/searchJSON?country=${countryCode}&featureClass=P&maxRows=20&username=${username}`);
-    const data = await res.json();
-    return data.geonames || [];
+    try {
+        let res = await fetch(`https://api.geonames.org/searchJSON?country=${countryCode}&featureClass=P&maxRows=10&username=${username}`);
+
+        if (!res.ok) throw new Error("City fetch failed");
+
+        let data = await res.json();
+
+        return data.geonames || [];
+
+    } catch (err) {
+        return [];
+    }
 }
 
 // تشغيل
@@ -58,11 +96,16 @@ async function load() {
 
     const countries = await getCountries();
 
+    if (!countries.length) {
+        output.innerHTML = "<div class='error'>❌ فشل تحميل البيانات من GeoNames</div>";
+        return;
+    }
+
     for (const country of countries) {
 
         const countryDiv = document.createElement("div");
         countryDiv.className = "country";
-        countryDiv.innerHTML = `<h3>🌎 ${country.countryName}</h3><div>جاري تحميل المدن...</div>`;
+        countryDiv.innerHTML = `<h3>🌎 ${country.countryName}</h3><div>⏳ جاري تحميل المدن...</div>`;
         output.appendChild(countryDiv);
 
         const cities = await getCities(country.countryCode);
@@ -72,7 +115,13 @@ async function load() {
             html += `<div class="city">🏙️ ${city.name}</div>`;
         });
 
-        countryDiv.innerHTML = `<h3>🌎 ${country.countryName}</h3>${html}`;
+        countryDiv.innerHTML = `
+            <h3>🌎 ${country.countryName}</h3>
+            ${html || "<div class='error'>لا توجد مدن</div>"}
+        `;
+
+        // مهم جدًا لتخفيف الضغط على API
+        await delay(200);
     }
 }
 
