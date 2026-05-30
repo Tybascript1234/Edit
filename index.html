@@ -31,9 +31,11 @@
             gap: 10px;
             align-items: center;
             margin-bottom: 10px;
+            flex-wrap: wrap;
         }
         .search-box {
             flex: 1;
+            min-width: 180px;
             padding: 15px 20px;
             font-size: 16px;
             border: 2px solid #cbd5e1;
@@ -47,11 +49,10 @@
             border-color: #3498db;
             box-shadow: 0 4px 12px rgba(52,152,219,0.15);
         }
-        #btn-download {
-            padding: 13px 22px;
+        .action-btn {
+            padding: 13px 20px;
             font-size: 14px;
             font-weight: bold;
-            background: #27ae60;
             color: #fff;
             border: none;
             border-radius: 30px;
@@ -62,13 +63,12 @@
             align-items: center;
             gap: 7px;
         }
-        #btn-download:hover { background: #219a52; }
-        #btn-download:active { transform: scale(0.97); }
-        #btn-download:disabled {
-            background: #95a5a6;
+        .action-btn:active { transform: scale(0.97); }
+        .action-btn:disabled {
+            background: #95a5a6 !important;
             cursor: not-allowed;
         }
-        #btn-download svg {
+        .action-btn svg {
             width: 18px;
             height: 18px;
             fill: none;
@@ -78,6 +78,11 @@
             stroke-linejoin: round;
             flex-shrink: 0;
         }
+        #btn-download { background: #27ae60; }
+        #btn-download:hover:not(:disabled) { background: #219a52; }
+        #btn-copy { background: #2980b9; }
+        #btn-copy:hover:not(:disabled) { background: #2171a3; }
+        #btn-copy.copied { background: #16a085; }
         #search-hint {
             text-align: center;
             font-size: 13px;
@@ -171,9 +176,15 @@
 
     <div class="top-controls">
         <input type="text" id="searchBar" class="search-box" placeholder="جاري التحميل..." disabled>
-        <button id="btn-download" disabled title="تنزيل البيانات كملف JS">
+
+        <button id="btn-download" class="action-btn" disabled title="تنزيل البيانات كملف JS">
             <svg viewBox="0 0 24 24"><path d="M12 3v13M5 15l7 7 7-7M3 21h18"/></svg>
-            تنزيل البيانات
+            تنزيل
+        </button>
+
+        <button id="btn-copy" class="action-btn" disabled title="نسخ البيانات كاملة">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            نسخ الكل
         </button>
     </div>
     <div id="search-hint">ابدأ الكتابة للبحث الفوري — لا حاجة لضغط Enter</div>
@@ -192,13 +203,26 @@
     const searchBar      = document.getElementById('searchBar');
     const noResults      = document.getElementById('no-results');
     const btnDownload    = document.getElementById('btn-download');
+    const btnCopy        = document.getElementById('btn-copy');
 
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-    // مصفوفة رئيسية تحمل كل البيانات — تُستخدم للبحث وللتنزيل معاً
     const allCards = [];
-    // كائن نقي للتنزيل: { "CountryName (CC)": ["City1","City2",...] }
     const downloadData = {};
+
+    // ======= بناء نص الملف =======
+    function buildFileContent() {
+        const lines = [];
+        lines.push('const countriesAndCities = {');
+        const entries = Object.entries(downloadData);
+        entries.forEach(([country, cities], idx) => {
+            const citiesJSON = JSON.stringify(cities);
+            const comma = idx < entries.length - 1 ? ',' : '';
+            lines.push(`    ${JSON.stringify(country)}: ${citiesJSON}${comma}`);
+        });
+        lines.push('};');
+        return lines.join('\n');
+    }
 
     async function loadGeoNamesDatabase() {
         try {
@@ -251,8 +275,8 @@
             statusMessage.style.color = '#155724';
             statusMessage.textContent = `🎉 اكتمل تحميل كافة دول ومدن العالم بنجاح! (${allCards.length} دولة)`;
 
-            // تفعيل زر التنزيل بعد اكتمال التحميل
             btnDownload.disabled = false;
+            btnCopy.disabled = false;
 
         } catch (error) {
             console.error('خطأ أثناء التحميل:', error);
@@ -304,27 +328,13 @@
             cityCount: item.cities.length
         });
 
-        // تخزين للتنزيل: المفتاح هو "CountryName (CC)"
         const key = `${item.name} (${item.code})`;
         downloadData[key] = item.cities;
     }
 
     // ======= زر التنزيل =======
     btnDownload.addEventListener('click', function () {
-        // بناء نص الملف بالشكل المطلوب بالضبط
-        const lines = [];
-        lines.push('const countriesAndCities = {');
-
-        const entries = Object.entries(downloadData);
-        entries.forEach(([country, cities], idx) => {
-            const citiesJSON = JSON.stringify(cities);
-            const comma = idx < entries.length - 1 ? ',' : '';
-            lines.push(`    ${JSON.stringify(country)}: ${citiesJSON}${comma}`);
-        });
-
-        lines.push('};');
-
-        const content = lines.join('\n');
+        const content = buildFileContent();
         const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -334,6 +344,47 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    });
+
+    // ======= زر نسخ الكل =======
+    btnCopy.addEventListener('click', async function () {
+        const content = buildFileContent();
+        try {
+            await navigator.clipboard.writeText(content);
+            // تغيير مؤقت لنص الزر للتأكيد
+            btnCopy.classList.add('copied');
+            const originalHTML = btnCopy.innerHTML;
+            btnCopy.innerHTML = `
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                تم النسخ!
+            `;
+            setTimeout(() => {
+                btnCopy.innerHTML = originalHTML;
+                btnCopy.classList.remove('copied');
+            }, 2500);
+        } catch (err) {
+            // fallback للمتصفحات القديمة
+            const ta = document.createElement('textarea');
+            ta.value = content;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+
+            btnCopy.classList.add('copied');
+            const originalHTML = btnCopy.innerHTML;
+            btnCopy.innerHTML = `
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                تم النسخ!
+            `;
+            setTimeout(() => {
+                btnCopy.innerHTML = originalHTML;
+                btnCopy.classList.remove('copied');
+            }, 2500);
+        }
     });
 
     // ======= البحث الفوري =======
