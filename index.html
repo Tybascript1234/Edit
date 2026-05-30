@@ -70,6 +70,10 @@
             border: 1px solid #e2e8f0;
             animation: fadeIn 0.4s ease-in-out;
         }
+        /* حالة الإخفاء عبر CSS فقط دون إزالة من DOM */
+        .country-card.hidden {
+            display: none;
+        }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -109,12 +113,23 @@
             color: #475569;
             border: 1px solid #e2e8f0;
         }
+        /* إخفاء مدينة معينة عند البحث */
+        .city-item.hidden {
+            display: none;
+        }
         .cities-list::-webkit-scrollbar {
             width: 4px;
         }
         .cities-list::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 4px;
+        }
+        /* رسالة لا توجد نتائج */
+        #no-results {
+            display: none;
+            text-align: center;
+            color: #999;
+            padding: 20px;
         }
     </style>
 </head>
@@ -128,6 +143,8 @@
 
     <div id="status-message">جاري الاتصال بخادم GeoNames وجلب قائمة دول العالم...</div>
 
+    <p id="no-results">لم يتم العثور على نتائج مطابقة.</p>
+
     <div id="data-container"></div>
 </div>
 
@@ -136,11 +153,11 @@
     const username = 'myeo'; 
     
     let structuredWorldData = []; 
-    let currentRenderToken = 0; // توكن لمنع تداخل عمليات العرض المتتابعة عند تكرار المسح والبحث
 
     const dataContainer = document.getElementById('data-container');
     const statusMessage = document.getElementById('status-message');
     const searchBar = document.getElementById('searchBar');
+    const noResults = document.getElementById('no-results');
 
     // دالة مساعدة لعمل تأخير زمني مخصص (بالملي ثانية)
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -163,7 +180,7 @@
 
             // فتح ميزة البحث فوراً على الدول المتاحة حتى لا ينتظر المستخدم طويلاً
             searchBar.disabled = false;
-            searchBar.placeholder = "اكتب كلمة البحث واضغط Enter للبحث...";
+            searchBar.placeholder = "اكتب كلمة البحث للفلترة الفورية...";
 
             let count = 0;
             let currentChunk = [];
@@ -205,7 +222,7 @@
                         currentChunk.forEach(item => appendCountryCard(item));
                         // تصفير المصفوفة المؤقتة لاستقبال الدفعة التالية
                         currentChunk = [];
-                        // الفاصل الزمني المطلوب بين كل دفعة (30 دولة) والدفعة التالية: 1 مللي ثانية
+                        // الفاصل الزمني المطلوب بين كل دفعة (30 دولة) والدفعة التالية
                         await delay(1);
                     }
 
@@ -228,7 +245,7 @@
             statusMessage.style.background = '#d4edda';
             statusMessage.style.color = '#155724';
             statusMessage.textContent = '🎉 اكتمل تحميل كافة دول ومدن العالم بنجاح!';
-            searchBar.placeholder = "اكتب واضغط Enter للبحث... (امسح النص كاملاً لإعادة فك القائمة تتابعياً)";
+            searchBar.placeholder = "اكتب للبحث الفوري في الدول والمدن...";
 
         } catch (error) {
             console.error('خطأ أثناء تحميل البيانات:', error);
@@ -242,7 +259,9 @@
     function appendCountryCard(item) {
         const card = document.createElement('div');
         card.className = 'country-card';
+        // نخزن الاسم مصغراً كـ data attribute للمقارنة السريعة لاحقاً
         card.setAttribute('data-country-name', item.name.toLowerCase());
+        card.setAttribute('data-country-code', item.code.toLowerCase());
 
         const countryHeader = document.createElement('h3');
         countryHeader.className = 'country-name';
@@ -260,6 +279,8 @@
             item.cities.forEach(city => {
                 const citySpan = document.createElement('span');
                 citySpan.className = 'city-item';
+                // نخزن اسم المدينة مصغراً كـ data attribute للمقارنة السريعة
+                citySpan.setAttribute('data-city-name', city.toLowerCase());
                 citySpan.textContent = city;
                 citiesDiv.appendChild(citySpan);
             });
@@ -271,83 +292,107 @@
         dataContainer.appendChild(card);
     }
 
-    // 2. دالة العرض التتابعي عند مسح النص (تأخذ المصفوفة وتعرض 10 دول ثم تنتظر 1 مللي ثانية وهكذا)
+    // =====================================================================
+    // 2. دالة العرض التتابعي عند أول تحميل (30 دولة ثم 1ms وهكذا)
+    //    تُستخدم فقط في renderDataChunked للبيانات التي لم تُبنَ بعد في DOM
+    // =====================================================================
     async function renderDataChunked(data) {
         dataContainer.innerHTML = '';
-        
-        // توليد توكن فريد لهذه العملية لإيقافها فوراً لو قام المستخدم بكتابة شيء آخر أثناء معالجتها
-        const token = ++currentRenderToken;
+        noResults.style.display = 'none';
 
         if(data.length === 0) {
-            dataContainer.innerHTML = '<p style="text-align:center; color:#999; padding: 20px;">لم يتم العثور على نتائج مطابقة.</p>';
+            noResults.style.display = 'block';
             return;
         }
 
         let index = 0;
         while (index < data.length) {
-            // التحقق من أن المستخدم لم يقم بعملية بحث جديدة أثناء عمل الدالة
-            if (token !== currentRenderToken) return;
-
-            // استخراج 10 دول من المصفوفة وحقنها
-            const chunk = data.slice(index, index + 10);
-            chunk.forEach(item => {
-                appendCountryCard(item);
-            });
-
-            index += 10;
-
-            // الانتظار لمدة 1 مللي ثانية بين كل 10 دول و 10 دول أخرى
+            const chunk = data.slice(index, index + 30); // ← 30 دولة لكل دفعة
+            chunk.forEach(item => appendCountryCard(item));
+            index += 30;
             await delay(1);
         }
     }
 
-    // دالة عرض عادية فورية تستخدم فقط عند إظهار نتائج فتلرة البحث المحدودة لسرعة الاستجابة
-    function renderDataInstant(data) {
-        dataContainer.innerHTML = '';
-        if(data.length === 0) {
-            dataContainer.innerHTML = '<p style="text-align:center; color:#999; padding: 20px;">لم يتم العثور على نتائج مطابقة.</p>';
-            return;
-        }
-        data.forEach(item => {
-            appendCountryCard(item);
+    // =====================================================================
+    // 3. دالة الفلترة عبر إخفاء/إظهار البطاقات الموجودة في DOM فقط
+    //    بدون حذف أو إعادة بناء أي عنصر — فورية وخفيفة جداً
+    // =====================================================================
+    function filterCardsInDOM(searchTerm) {
+        const cards = dataContainer.querySelectorAll('.country-card');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const countryName = card.getAttribute('data-country-name') || '';
+            const matchCountry = countryName.includes(searchTerm);
+
+            // التعامل مع مدن البطاقة
+            const cityItems = card.querySelectorAll('.city-item');
+            let matchedCitiesCount = 0;
+
+            cityItems.forEach(cityItem => {
+                const cityName = cityItem.getAttribute('data-city-name') || '';
+                if (matchCountry) {
+                    // إذا تطابقت الدولة، نُظهر كل مدنها
+                    cityItem.classList.remove('hidden');
+                    matchedCitiesCount++;
+                } else if (cityName.includes(searchTerm)) {
+                    cityItem.classList.remove('hidden');
+                    matchedCitiesCount++;
+                } else {
+                    cityItem.classList.add('hidden');
+                }
+            });
+
+            // إظهار البطاقة إذا تطابقت الدولة أو أي مدينة منها
+            if (matchCountry || matchedCitiesCount > 0) {
+                card.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                card.classList.add('hidden');
+            }
         });
+
+        // إظهار رسالة "لا توجد نتائج" إذا لزم
+        noResults.style.display = visibleCount === 0 ? 'block' : 'none';
     }
 
-    // 3. مراقبة حركة البحث عبر زر Enter ومراقبة مسح النص بالكامل
-    searchBar.addEventListener('keydown', function(e) {
-        // التحقق من الضغط على زر Enter فقط للبدء بالبحث
-        if (e.key === 'Enter') {
-            const searchTerm = searchBar.value.toLowerCase().trim();
+    // دالة إظهار كل البطاقات والمدن بدون أي حذف أو إعادة بناء
+    function showAllCardsInDOM() {
+        const cards = dataContainer.querySelectorAll('.country-card');
+        cards.forEach(card => {
+            card.classList.remove('hidden');
+            card.querySelectorAll('.city-item').forEach(cityItem => {
+                cityItem.classList.remove('hidden');
+            });
+        });
+        noResults.style.display = 'none';
+    }
 
-            if (!searchTerm) {
-                // إذا ضغط إنتر والحقل فارغ، يعيد فك كل البيانات تتابعياً
-                renderDataChunked(structuredWorldData);
-                return;
-            }
+    // =====================================================================
+    // 4. مراقبة حركة البحث — فلترة فورية عند كل حرف (input event)
+    // =====================================================================
+    searchBar.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase().trim();
 
-            // تنفيذ عملية تصفية حية من الذاكرة
-            const filteredData = structuredWorldData.map(item => {
-                const matchCountry = item.name.toLowerCase().includes(searchTerm);
-                const filteredCities = item.cities.filter(city => city.toLowerCase().includes(searchTerm));
-
-                if (matchCountry || filteredCities.length > 0) {
-                    return {
-                        ...item,
-                        cities: matchCountry ? item.cities : filteredCities
-                    };
-                }
-                return null;
-            }).filter(item => item !== null);
-
-            renderDataInstant(filteredData);
+        if (searchTerm === '') {
+            // عند تفريغ خانة البحث: إظهار كل البطاقات فقط بدون أي إعادة بناء
+            showAllCardsInDOM();
+        } else {
+            // فلترة فورية عبر إخفاء/إظهار العناصر الموجودة في DOM
+            filterCardsInDOM(searchTerm);
         }
     });
 
-    // مراقبة مسح النص بالكامل (لو قام المستخدم بمسح النص بـ Backspace أو زر X)
-    searchBar.addEventListener('input', function(e) {
-        if (e.target.value.trim() === "") {
-            // عند إزالة النص كله بالكامل تعود كل النتائج بنظام (10 دول ثم 1 مللي ثانية ثم 10 دول)
-            renderDataChunked(structuredWorldData);
+    // دعم Enter للبحث أيضاً (سلوك اختياري للمستخدمين الذين يضغطون Enter)
+    searchBar.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            const searchTerm = searchBar.value.toLowerCase().trim();
+            if (searchTerm === '') {
+                showAllCardsInDOM();
+            } else {
+                filterCardsInDOM(searchTerm);
+            }
         }
     });
 
