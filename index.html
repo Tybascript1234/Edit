@@ -3,214 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>قائمة دول ومدن العالم</title>
+    <title>الدليل الكامل لدول ومدن العالم</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
+            background-color: #f4f6f9;
             margin: 0;
-            padding: 40px 20px;
-            display: flex;
-            justify-content: center;
+            padding: 20px;
+            color: #333;
         }
-        .container {
-            background-color: #ffffff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            width: 100%;
-            max-width: 500px;
+        .wrapper {
+            max-width: 1000px;
+            margin: 0 auto;
         }
         h2 {
             text-align: center;
-            color: #333;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        p.subtitle {
+            text-align: center;
+            color: #7f8c8d;
             margin-bottom: 25px;
         }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #555;
-        }
-        select {
+        /* شريط البحث */
+        .search-box {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            background-color: #fff;
+            padding: 15px 20px;
             font-size: 16px;
-            color: #333;
+            border: 2px solid #cbd5e1;
+            border-radius: 30px;
+            margin-bottom: 25px;
+            box-sizing: border-box;
             outline: none;
-            transition: border-color 0.3s;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         }
-        select:focus {
-            border-color: #007bff;
+        .search-box:focus {
+            border-color: #3498db;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
         }
-        select:disabled {
-            background-color: #e9ecef;
-            cursor: not-allowed;
+        /* مؤشر التحميل */
+        #status-message {
+            text-align: center;
+            font-size: 16px;
+            color: #2980b9;
+            background: #eaf2f8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
         }
-        .loading {
-            font-size: 12px;
-            color: #007bff;
-            margin-top: 5px;
-            display: none;
+        /* حاوية البيانات الكاملة */
+        #data-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+        /* بطاقة الدولة */
+        .country-card {
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+            border: 1px solid #e2e8f0;
+        }
+        .country-name {
+            font-size: 22px;
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .city-count {
+            font-size: 13px;
+            background: #3498db;
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 15px;
+        }
+        /* حاوية المدن المفرودة */
+        .cities-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .city-item {
+            background-color: #f8fafc;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+        .cities-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .cities-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>قائمة الدول والمدن الديناميكية</h2>
+<div class="wrapper">
+    <h2>الدليل الشامل لدول ومدن العالم بالكامل</h2>
+    <p class="subtitle">قاعدة بيانات تفصيلية وشاملة للمدن والبلدات العربية والعالمية</p>
+    
+    <input type="text" id="searchBar" class="search-box" placeholder="ابحث عن دولة، مدينة، أو بلدة معينة..." disabled>
 
-    <div class="form-group">
-        <label for="country">اختر الدولة:</label>
-        <select id="country">
-            <option value="">-- جاري تحميل الدول... --</option>
-        </select>
-    </div>
+    <div id="status-message">جاري الاتصال بالسيرفر وتحميل قاعدة البيانات (برجاء الانتظار، الملف تفصيلي وضخم)...</div>
 
-    <div class="form-group">
-        <label for="state">اختر الولاية/المحافظة:</label>
-        <select id="state" disabled>
-            <option value="">-- اختر الدولة أولاً --</option>
-        </select>
-        <div id="state-loading" class="loading">جاري تحميل المحافظات...</div>
-    </div>
-
-    <div class="form-group">
-        <label for="city">اختر المدينة:</label>
-        <select id="city" disabled>
-            <option value="">-- اختر المحافظة أولاً --</option>
-        </select>
-        <div id="city-loading" class="loading">جاري تحميل المدن...</div>
-    </div>
+    <div id="data-container"></div>
 </div>
 
 <script>
-    // استخدام API مفتوح ومجاني لبيانات الدول والمدن
-    const config = {
-        cUrl: 'https://api.countrystatecity.in/v1/countries',
-        ckey: 'NHVvOWh6bExRowVpZ0N0N01JWkY0N2ZTeU5vN0g1b0g3b01mY3RLYw==' // مفتاح تجريبي مجاني موثق
-    };
-
-    const countrySelect = document.getElementById('country');
-    const stateSelect = document.getElementById('state');
-    const citySelect = document.getElementById('city');
+    // الروابط المحدثة والمباشرة من المستودع لتجنب خطأ 404
+    const countriesUrl = 'https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/data/json/countries.json';
+    const citiesUrl = 'https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/data/json/cities.json';
     
-    const stateLoading = document.getElementById('state-loading');
-    const cityLoading = document.getElementById('city-loading');
+    let structuredWorldData = []; 
 
-    // 1. جلب جميع دول العالم عند تحميل الصفحة
-    function loadCountries() {
-        fetch(config.cUrl, { headers: { "X-CSCAPI-KEY": config.ckey } })
-            .then(response => response.json())
-            .then(data => {
-                countrySelect.innerHTML = '<option value="">-- اختر الدولة --</option>';
-                
-                // ترتيب الدول أبجدياً
-                data.sort((a, b) => a.name.localeCompare(b.name));
+    const dataContainer = document.getElementById('data-container');
+    const statusMessage = document.getElementById('status-message');
+    const searchBar = document.getElementById('searchBar');
 
-                data.forEach(country => {
-                    const option = document.createElement('option');
-                    option.value = country.iso2; // نستخدم رمز الدولة مثل EG, US
-                    option.textContent = country.name;
-                    countrySelect.appendChild(option);
-                });
-            })
-            .catch(error => {
-                console.error('خطأ في جلب الدول:', error);
-                countrySelect.innerHTML = '<option value="">فشل تحميل الدول</option>';
+    async function loadUltimateDatabase() {
+        try {
+            // 1. جلب الدول
+            const countriesResponse = await fetch(countriesUrl);
+            if (!countriesResponse.ok) throw new Error('فشل جلب ملف الدول');
+            const countries = await countriesResponse.json();
+            
+            statusMessage.textContent = 'تم تحميل الدول بنجاح. جاري جلب المدن والبلدات وفهرستها الآن...';
+
+            // 2. جلب المدن
+            const citiesResponse = await fetch(citiesUrl);
+            if (!citiesResponse.ok) throw new Error('فشل جلب ملف المدن');
+            const cities = await citiesResponse.json();
+
+            statusMessage.textContent = 'جاري ربط وتجميع المدن والبلدات تحت دولها...';
+
+            // 3. ربط المدن بالدول عن طريق كود الدولة لسرعة الأداء
+            const citiesMap = {};
+            cities.forEach(city => {
+                const code = city.country_code;
+                if (!citiesMap[code]) {
+                    citiesMap[code] = [];
+                }
+                citiesMap[code].push(city.name);
             });
+
+            // 4. دمج البيانات
+            structuredWorldData = countries.map(country => {
+                return {
+                    name: country.name,
+                    native: country.native || country.name,
+                    code: country.iso2,
+                    cities: citiesMap[country.iso2] || []
+                };
+            });
+
+            // ترتيب الدول أبجدياً
+            structuredWorldData.sort((a, b) => a.name.localeCompare(b.name));
+
+            // تشغيل الواجهة
+            statusMessage.style.display = 'none';
+            searchBar.disabled = false;
+            searchBar.placeholder = "ابحث الآن في كل مدن العالم...";
+
+            renderData(structuredWorldData);
+
+        } catch (error) {
+            console.error('خطأ أثناء تحميل قاعدة البيانات:', error);
+            statusMessage.textContent = 'حدث خطأ أثناء تحميل البيانات. يرجى التأكد من الاتصال بالإنترنت وإعادة تحديث الصفحة.';
+            statusMessage.style.background = '#f2dede';
+            statusMessage.style.color = '#a94442';
+        }
     }
 
-    // 2. عند تغيير الدولة -> جلب الولايات/المحافظات التابعة لها
-    countrySelect.addEventListener('change', function() {
-        const countryCode = this.value;
-        
-        // تصفية وتجهيز القوائم التالية
-        stateSelect.innerHTML = '<option value="">-- اختر الولاية/المحافظة --</option>';
-        citySelect.innerHTML = '<option value="">-- اختر المحافظة أولاً --</option>';
-        stateSelect.disabled = true;
-        citySelect.disabled = true;
+    function renderData(data) {
+        dataContainer.innerHTML = '';
 
-        if (!countryCode) return;
-
-        stateLoading.style.display = 'block';
-
-        fetch(`${config.cUrl}/${countryCode}/states`, { headers: { "X-CSCAPI-KEY": config.ckey } })
-            .then(response => response.json())
-            .then(data => {
-                stateLoading.style.display = 'none';
-                
-                if(data.length === 0) {
-                    // بعض الدول الصغيرة جداً ليس لها محافظات، ننتقل للمدن مباشرة
-                    stateSelect.innerHTML = '<option value="NONE">لا توجد محافظات (اختر المدينة مباشرة)</option>';
-                    stateSelect.disabled = false;
-                    loadCities(countryCode, 'NONE'); 
-                    return;
-                }
-
-                data.sort((a, b) => a.name.localeCompare(b.name));
-                data.forEach(state => {
-                    const option = document.createElement('option');
-                    option.value = state.iso2;
-                    option.textContent = state.name;
-                    stateSelect.appendChild(option);
-                });
-                stateSelect.disabled = false;
-            });
-    });
-
-    // 3. عند تغيير الولاية -> جلب المدن التابعة لها
-    stateSelect.addEventListener('change', function() {
-        const countryCode = countrySelect.value;
-        const stateCode = this.value;
-
-        citySelect.innerHTML = '<option value="">-- اختر المدينة --</option>';
-        citySelect.disabled = true;
-
-        if (!stateCode || stateCode === 'NONE') return;
-
-        cityLoading.style.display = 'block';
-        loadCities(countryCode, stateCode);
-    });
-
-    // دالة مساعدة لجلب المدن
-    function loadCities(countryCode, stateCode) {
-        let url = `${config.cUrl}/${countryCode}/cities`; // إذا لم تكن هناك ولاية
-        if(stateCode !== 'NONE') {
-            url = `${config.cUrl}/${countryCode}/states/${stateCode}/cities`;
+        if(data.length === 0) {
+            dataContainer.innerHTML = '<p style="text-align:center; color:#999; padding: 20px;">لم يتم العثور على نتائج مطابقة.</p>';
+            return;
         }
 
-        fetch(url, { headers: { "X-CSCAPI-KEY": config.ckey } })
-            .then(response => response.json())
-            .then(data => {
-                cityLoading.style.display = 'none';
-                citySelect.innerHTML = '<option value="">-- اختر المدينة --</option>';
+        data.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'country-card';
 
-                if(data.length === 0) {
-                    citySelect.innerHTML = '<option value="">لا توجد مدن مسجلة</option>';
-                    citySelect.disabled = false;
-                    return;
-                }
+            const countryHeader = document.createElement('h3');
+            countryHeader.className = 'country-name';
+            countryHeader.innerHTML = `
+                <span>${item.name} <small style="color:#7f8c8d; font-size:14px;">(${item.native})</small></span>
+                <span class="city-count">${item.cities.length} مدينة/بلدة</span>
+            `;
+            card.appendChild(countryHeader);
 
-                data.sort((a, b) => a.name.localeCompare(b.name));
-                data.forEach(city => {
-                    const option = document.createElement('option');
-                    option.value = city.name;
-                    option.textContent = city.name;
-                    citySelect.appendChild(option);
+            const citiesDiv = document.createElement('div');
+            citiesDiv.className = 'cities-list';
+
+            if(item.cities.length > 0) {
+                item.cities.sort((a, b) => a.localeCompare(b));
+                item.cities.forEach(city => {
+                    const citySpan = document.createElement('span');
+                    citySpan.className = 'city-item';
+                    citySpan.textContent = city;
+                    citiesDiv.appendChild(citySpan);
                 });
-                citySelect.disabled = false;
-            });
+            } else {
+                citiesDiv.innerHTML = '<em style="color:#aaa; font-size:13px; padding: 5px;">لا توجد مدن متوفرة</em>';
+            }
+
+            card.appendChild(citiesDiv);
+            dataContainer.appendChild(card);
+        });
     }
 
-    // تشغيل الدالة عند فتح الصفحة
-    window.onload = loadCountries;
+    // محرك البحث الفوري والذكي
+    searchBar.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase().trim();
+
+        if (!searchTerm) {
+            renderData(structuredWorldData);
+            return;
+        }
+
+        const filteredData = structuredWorldData.map(item => {
+            const matchCountry = item.name.toLowerCase().includes(searchTerm) || item.native.toLowerCase().includes(searchTerm);
+            const filteredCities = item.cities.filter(city => city.toLowerCase().includes(searchTerm));
+
+            if (matchCountry || filteredCities.length > 0) {
+                return {
+                    ...item,
+                    cities: matchCountry ? item.cities : filteredCities
+                };
+            }
+            return null;
+        }).filter(item => item !== null);
+
+        renderData(filteredData);
+    });
+
+    window.onload = loadUltimateDatabase;
 </script>
 
 </body>
