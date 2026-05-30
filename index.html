@@ -1,126 +1,205 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<title>الدول والمدن - GeoNames</title>
-
-<style>
-body {
-    font-family: Arial;
-    direction: rtl;
-    background: #f4f4f4;
-    padding: 20px;
-}
-
-button {
-    padding: 10px 15px;
-    margin: 10px 0;
-    cursor: pointer;
-}
-
-select {
-    width: 300px;
-    padding: 8px;
-    margin: 10px 0;
-}
-
-.box {
-    background: white;
-    padding: 15px;
-    border-radius: 10px;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مستعرض الدول والمدن - GeoNames</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            background-color: #fff;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        select:focus {
+            border-color: #3498db;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            color: #3498db;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .error-msg {
+            color: #e74c3c;
+            background: #fadbd8;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+            text-align: center;
+            font-size: 14px;
+        }
+    </style>
 </head>
-
 <body>
 
-<h2>🌍 الدول والمدن عبر GeoNames (بدون API)</h2>
+<div class="container">
+    <h2>استعراض الدول والمدن (GeoNames)</h2>
+    
+    <div class="error-msg" id="errorMessage"></div>
 
-<button onclick="loadData()">تحميل البيانات</button>
+    <div class="form-group">
+        <label for="countrySelect">اختر الدولة:</label>
+        <select id="countrySelect">
+            <option value="">-- جاري تحميل الدول... --</option>
+        </select>
+    </div>
 
-<div class="box">
-    <label>الدول:</label><br>
-    <select id="countries" onchange="loadCities()"></select>
+    <div class="form-group">
+        <label for="citySelect">اختر المدينة:</label>
+        <select id="citySelect" disabled>
+            <option value="">-- اختر الدولة أولاً --</option>
+        </select>
+    </div>
 
-    <br><br>
-
-    <label>المدن:</label><br>
-    <select id="cities"></select>
+    <div class="loading" id="loadingText">جاري تحميل البيانات...</div>
 </div>
 
-<!-- JSZip -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
 <script>
-let countryMap = {};   // code => name
-let cityMap = {};      // countryCode => cities array
+    // ⚠️ استبدل 'YOUR_USERNAME' باسم المستخدم الخاص بك بعد تفعيل الـ Cloud Services في حسابك
+    const GEONAMES_USERNAME = 'YOUR_USERNAME'; 
 
-// تحميل الدول + المدن
-async function loadData() {
+    const countrySelect = document.getElementById('countrySelect');
+    const citySelect = document.getElementById('citySelect');
+    const loadingText = document.getElementById('loadingText');
+    const errorMessage = document.getElementById('errorMessage');
 
-    // 1. تحميل الدول
-    const countriesRes = await fetch("https://download.geonames.org/export/dump/countryInfo.txt");
-    const countriesText = await countriesRes.text();
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+    }
 
-    countriesText.split("\n").forEach(line => {
-        if (line.startsWith("#") || !line.trim()) return;
+    function clearError() {
+        errorMessage.textContent = '';
+        errorMessage.style.display = 'none';
+    }
 
-        const parts = line.split("\t");
-        const code = parts[0];
-        const name = parts[4];
+    // 1. تحميل قائمة جميع الدول عند فتح الصفحة
+    async function loadCountries() {
+        clearError();
+        try {
+            const response = await fetch(`https://secure.geonames.org/countryInfoJSON?username=${GEONAMES_USERNAME}`);
+            
+            if (!response.ok) {
+                throw new Error("فشل الاتصال بالسيرفر");
+            }
+            
+            const data = await response.json();
+            
+            // التحقق مما إذا كان GeoNames قد أرجع رسالة خطأ (مثل استهلاك الحد الأقصى أو اسم مستخدم خاطئ)
+            if (data.status && data.status.value) {
+                throw new Error(data.status.message);
+            }
 
-        countryMap[code] = name;
-    });
+            if (!data.geonames) {
+                throw new Error("بيانات الدول غير موجودة");
+            }
 
-    const countriesSelect = document.getElementById("countries");
-    countriesSelect.innerHTML = "";
+            // ترتيب الدول أبجدياً
+            const countries = data.geonames.sort((a, b) => a.countryName.localeCompare(b.countryName));
 
-    Object.entries(countryMap).forEach(([code, name]) => {
-        const opt = document.createElement("option");
-        opt.value = code;
-        opt.textContent = name;
-        countriesSelect.appendChild(opt);
-    });
+            countrySelect.innerHTML = '<option value="">-- اختر دولة --</option>';
+            countries.forEach(country => {
+                const option = document.createElement('option');
+                option.value = country.countryCode; 
+                option.textContent = country.countryName; 
+                countrySelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('حدث خطأ:', error);
+            showError(`خطأ: ${error.message}. تأكد من وضع اسم مستخدم صحيح وتفعيل الـ Cloud Services وتشغيل الملف عبر سيرفر محلي (Live Server).`);
+            countrySelect.innerHTML = '<option value="">فشل تحميل الدول</option>';
+        }
+    }
 
-    // 2. تحميل المدن (ZIP)
-    const zipRes = await fetch("https://download.geonames.org/export/dump/cities15000.zip");
-    const zipData = await zipRes.arrayBuffer();
-
-    const zip = await JSZip.loadAsync(zipData);
-    const fileName = Object.keys(zip.files)[0];
-    const text = await zip.files[fileName].async("string");
-
-    text.split("\n").forEach(line => {
-        if (!line.trim()) return;
-
-        const parts = line.split("\t");
-
-        const city = parts[1];
-        const countryCode = parts[8];
-
-        if (!cityMap[countryCode]) {
-            cityMap[countryCode] = [];
+    // 2. تحميل المدن التابعة للدولة المختارة
+    async function loadCities(countryCode) {
+        if (!countryCode) {
+            citySelect.innerHTML = '<option value="">-- اختر الدولة أولاً --</option>';
+            citySelect.disabled = true;
+            return;
         }
 
-        cityMap[countryCode].push(city);
+        citySelect.disabled = true;
+        citySelect.innerHTML = '<option value="">جاري تحميل المدن...</option>';
+        loadingText.style.display = 'block';
+        clearError();
+
+        try {
+            // جلب المدن (P تعني الأماكن المأهولة بالسكان) بحد أقصى 1000 مدينة لتجنب البطء
+            const response = await fetch(`https://secure.geonames.org/searchJSON?country=${countryCode}&featureClass=P&maxRows=1000&username=${GEONAMES_USERNAME}`);
+            const data = await response.json();
+
+            if (data.status && data.status.value) {
+                throw new Error(data.status.message);
+            }
+
+            if (data.geonames && data.geonames.length > 0) {
+                // ترتيب المدن أبجدياً
+                const cities = data.geonames.sort((a, b) => a.name.localeCompare(b.name));
+
+                citySelect.innerHTML = '<option value="">-- اختر مدينة --</option>';
+                cities.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city.geonameId;
+                    option.textContent = city.name;
+                    citySelect.appendChild(option);
+                });
+                citySelect.disabled = false;
+            } else {
+                citySelect.innerHTML = '<option value="">لا توجد مدن متاحة لهذه الدولة</option>';
+            }
+        } catch (error) {
+            console.error('حدث خطأ أثناء تحميل المدن:', error);
+            showError(`خطأ أثناء تحميل المدن: ${error.message}`);
+            citySelect.innerHTML = '<option value="">خطأ في تحميل المدن</option>';
+        } finally {
+            loadingText.style.display = 'none';
+        }
+    }
+
+    // مراقبة تغيير الاختيار في قائمة الدول
+    countrySelect.addEventListener('change', (e) => {
+        loadCities(e.target.value);
     });
 
-    alert("تم تحميل الدول والمدن بنجاح ✅");
-}
-
-// عند اختيار دولة
-function loadCities() {
-    const code = document.getElementById("countries").value;
-    const citiesSelect = document.getElementById("cities");
-
-    citiesSelect.innerHTML = "";
-
-    (cityMap[code] || []).forEach(city => {
-        const opt = document.createElement("option");
-        opt.textContent = city;
-        citiesSelect.appendChild(opt);
-    });
-}
+    // تشغيل الدالة عند تحميل الصفحة لبدء جلب الدول
+    window.onload = loadCountries;
 </script>
 
 </body>
