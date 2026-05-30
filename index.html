@@ -1,261 +1,83 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الدليل الكامل لدول ومدن العالم</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f6f9;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-        .wrapper {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-        h2 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-        p.subtitle {
-            text-align: center;
-            color: #7f8c8d;
-            margin-bottom: 25px;
-        }
-        /* شريط البحث */
-        .search-box {
-            width: 100%;
-            padding: 15px 20px;
-            font-size: 16px;
-            border: 2px solid #cbd5e1;
-            border-radius: 30px;
-            margin-bottom: 25px;
-            box-sizing: border-box;
-            outline: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-        }
-        .search-box:focus {
-            border-color: #3498db;
-            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
-        }
-        /* مؤشر التحميل */
-        #status-message {
-            text-align: center;
-            font-size: 16px;
-            color: #2980b9;
-            background: #eaf2f8;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
-        /* حاوية البيانات الكاملة */
-        #data-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 25px;
-        }
-        /* بطاقة الدولة */
-        .country-card {
-            background: #fff;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.03);
-            border: 1px solid #e2e8f0;
-        }
-        .country-name {
-            font-size: 22px;
-            color: #2c3e50;
-            margin-top: 0;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .city-count {
-            font-size: 13px;
-            background: #3498db;
-            color: #fff;
-            padding: 3px 10px;
-            border-radius: 15px;
-        }
-        /* حاوية المدن المفرودة */
-        .cities-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            max-height: 300px;
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-        .city-item {
-            background-color: #f8fafc;
-            padding: 5px 10px;
-            border-radius: 6px;
-            font-size: 13px;
-            color: #475569;
-            border: 1px solid #e2e8f0;
-        }
-        .cities-list::-webkit-scrollbar {
-            width: 4px;
-        }
-        .cities-list::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>الدول والمدن - GeoNames</title>
+
+<style>
+body {
+    font-family: Arial;
+    direction: rtl;
+    background: #f5f5f5;
+    padding: 20px;
+}
+
+.country {
+    background: #fff;
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+.city {
+    margin-right: 20px;
+    color: #444;
+    font-size: 14px;
+}
+</style>
 </head>
+
 <body>
 
-<div class="wrapper">
-    <h2>الدليل الشامل لدول ومدن العالم بالكامل</h2>
-    <p class="subtitle">قاعدة بيانات تفصيلية وشاملة للمدن والبلدات العربية والعالمية</p>
-    
-    <input type="text" id="searchBar" class="search-box" placeholder="ابحث عن دولة، مدينة، أو بلدة معينة..." disabled>
-
-    <div id="status-message">جاري الاتصال بالسيرفر وتحميل قاعدة البيانات (برجاء الانتظار، الملف تفصيلي وضخم)...</div>
-
-    <div id="data-container"></div>
-</div>
+<h2>🌍 الدول والمدن في العالم</h2>
+<div id="output">جاري التحميل...</div>
 
 <script>
-    // الروابط المحدثة والمباشرة من المستودع لتجنب خطأ 404
-    const countriesUrl = 'https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/data/json/countries.json';
-    const citiesUrl = 'https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/data/json/cities.json';
-    
-    let structuredWorldData = []; 
 
-    const dataContainer = document.getElementById('data-container');
-    const statusMessage = document.getElementById('status-message');
-    const searchBar = document.getElementById('searchBar');
+const username = "myeo";
 
-    async function loadUltimateDatabase() {
-        try {
-            // 1. جلب الدول
-            const countriesResponse = await fetch(countriesUrl);
-            if (!countriesResponse.ok) throw new Error('فشل جلب ملف الدول');
-            const countries = await countriesResponse.json();
-            
-            statusMessage.textContent = 'تم تحميل الدول بنجاح. جاري جلب المدن والبلدات وفهرستها الآن...';
+// جلب الدول
+async function getCountries() {
+    const res = await fetch(`https://api.geonames.org/countryInfoJSON?username=${username}`);
+    const data = await res.json();
+    return data.geonames;
+}
 
-            // 2. جلب المدن
-            const citiesResponse = await fetch(citiesUrl);
-            if (!citiesResponse.ok) throw new Error('فشل جلب ملف المدن');
-            const cities = await citiesResponse.json();
+// جلب مدن الدولة
+async function getCities(countryCode) {
+    const res = await fetch(`https://api.geonames.org/searchJSON?country=${countryCode}&featureClass=P&maxRows=20&username=${username}`);
+    const data = await res.json();
+    return data.geonames || [];
+}
 
-            statusMessage.textContent = 'جاري ربط وتجميع المدن والبلدات تحت دولها...';
+// تشغيل
+async function load() {
+    const output = document.getElementById("output");
+    output.innerHTML = "";
 
-            // 3. ربط المدن بالدول عن طريق كود الدولة لسرعة الأداء
-            const citiesMap = {};
-            cities.forEach(city => {
-                const code = city.country_code;
-                if (!citiesMap[code]) {
-                    citiesMap[code] = [];
-                }
-                citiesMap[code].push(city.name);
-            });
+    const countries = await getCountries();
 
-            // 4. دمج البيانات
-            structuredWorldData = countries.map(country => {
-                return {
-                    name: country.name,
-                    native: country.native || country.name,
-                    code: country.iso2,
-                    cities: citiesMap[country.iso2] || []
-                };
-            });
+    for (const country of countries) {
 
-            // ترتيب الدول أبجدياً
-            structuredWorldData.sort((a, b) => a.name.localeCompare(b.name));
+        const countryDiv = document.createElement("div");
+        countryDiv.className = "country";
+        countryDiv.innerHTML = `<h3>🌎 ${country.countryName}</h3><div>جاري تحميل المدن...</div>`;
+        output.appendChild(countryDiv);
 
-            // تشغيل الواجهة
-            statusMessage.style.display = 'none';
-            searchBar.disabled = false;
-            searchBar.placeholder = "ابحث الآن في كل مدن العالم...";
+        const cities = await getCities(country.countryCode);
 
-            renderData(structuredWorldData);
-
-        } catch (error) {
-            console.error('خطأ أثناء تحميل قاعدة البيانات:', error);
-            statusMessage.textContent = 'حدث خطأ أثناء تحميل البيانات. يرجى التأكد من الاتصال بالإنترنت وإعادة تحديث الصفحة.';
-            statusMessage.style.background = '#f2dede';
-            statusMessage.style.color = '#a94442';
-        }
-    }
-
-    function renderData(data) {
-        dataContainer.innerHTML = '';
-
-        if(data.length === 0) {
-            dataContainer.innerHTML = '<p style="text-align:center; color:#999; padding: 20px;">لم يتم العثور على نتائج مطابقة.</p>';
-            return;
-        }
-
-        data.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'country-card';
-
-            const countryHeader = document.createElement('h3');
-            countryHeader.className = 'country-name';
-            countryHeader.innerHTML = `
-                <span>${item.name} <small style="color:#7f8c8d; font-size:14px;">(${item.native})</small></span>
-                <span class="city-count">${item.cities.length} مدينة/بلدة</span>
-            `;
-            card.appendChild(countryHeader);
-
-            const citiesDiv = document.createElement('div');
-            citiesDiv.className = 'cities-list';
-
-            if(item.cities.length > 0) {
-                item.cities.sort((a, b) => a.localeCompare(b));
-                item.cities.forEach(city => {
-                    const citySpan = document.createElement('span');
-                    citySpan.className = 'city-item';
-                    citySpan.textContent = city;
-                    citiesDiv.appendChild(citySpan);
-                });
-            } else {
-                citiesDiv.innerHTML = '<em style="color:#aaa; font-size:13px; padding: 5px;">لا توجد مدن متوفرة</em>';
-            }
-
-            card.appendChild(citiesDiv);
-            dataContainer.appendChild(card);
+        let html = "";
+        cities.forEach(city => {
+            html += `<div class="city">🏙️ ${city.name}</div>`;
         });
+
+        countryDiv.innerHTML = `<h3>🌎 ${country.countryName}</h3>${html}`;
     }
+}
 
-    // محرك البحث الفوري والذكي
-    searchBar.addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase().trim();
+load();
 
-        if (!searchTerm) {
-            renderData(structuredWorldData);
-            return;
-        }
-
-        const filteredData = structuredWorldData.map(item => {
-            const matchCountry = item.name.toLowerCase().includes(searchTerm) || item.native.toLowerCase().includes(searchTerm);
-            const filteredCities = item.cities.filter(city => city.toLowerCase().includes(searchTerm));
-
-            if (matchCountry || filteredCities.length > 0) {
-                return {
-                    ...item,
-                    cities: matchCountry ? item.cities : filteredCities
-                };
-            }
-            return null;
-        }).filter(item => item !== null);
-
-        renderData(filteredData);
-    });
-
-    window.onload = loadUltimateDatabase;
 </script>
 
 </body>
