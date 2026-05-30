@@ -138,7 +138,7 @@
 
 <div class="wrapper">
     <h2>الدليل الشامل لدول ومدن العالم (GeoNames)</h2>
-    <p class="subtitle">بيانات حية ومدن بالإنجليزية مدعومة عبر سيرفر GeoNames</p>
+    <p class="subtitle">بيانات حية ومدن باللغة العربية مدعومة عبر سيرفر GeoNames</p>
 
     <input type="text" id="searchBar" class="search-box" placeholder="جاري التحميل..." disabled>
     <div id="search-hint">ابدأ الكتابة للبحث الفوري — لا حاجة لضغط Enter</div>
@@ -159,7 +159,6 @@
 
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-    // مصفوفة تخزن كل بطاقات DOM مع بيانات الدولة لأغراض البحث فقط
     const allCards = [];
 
     async function loadGeoNamesDatabase() {
@@ -185,21 +184,18 @@
                 const batch = countries.slice(i, i + BATCH_SIZE);
                 statusMessage.textContent = `جاري جلب مدن الدول ${i + 1}–${Math.min(i + BATCH_SIZE, countries.length)} من أصل ${countries.length}...`;
 
-                // جلب مدن كل الدول في الدفعة بالتوازي
                 const batchResults = await Promise.all(
                     batch.map(async (country) => {
                         try {
-                            // إضافة lang=en لضمان أسماء المدن بالإنجليزية
-                            const citiesUrl = `https://secure.geonames.org/searchJSON?country=${country.countryCode}&featureClass=P&maxRows=1000&lang=en&username=${username}`;
+                            // lang=ar لجلب أسماء المدن بالعربية
+                            const citiesUrl = `https://secure.geonames.org/searchJSON?country=${country.countryCode}&featureClass=P&maxRows=1000&lang=ar&username=${username}`;
                             const citiesResponse = await fetch(citiesUrl);
                             const citiesData = await citiesResponse.json();
 
                             let citiesList = [];
                             if (citiesData.geonames) {
-                                // تصفية للحصول على أسماء إنجليزية فقط (تحتوي فقط على أحرف ASCII)
-                                const rawCities = citiesData.geonames.map(c => c.name);
-                                const englishOnly = rawCities.filter(name => /^[\x00-\x7F\s\-'.,'()]+$/.test(name));
-                                citiesList = [...new Set(englishOnly)].sort();
+                                // إزالة التكرار فقط — بدون أي فلتر للغة
+                                citiesList = [...new Set(citiesData.geonames.map(c => c.name))].sort((a, b) => a.localeCompare(b, 'ar'));
                             }
 
                             return {
@@ -217,12 +213,10 @@
                     })
                 );
 
-                // حقن الدفعة كلها في الصفحة
                 batchResults.forEach(item => appendCountryCard(item));
 
                 i += BATCH_SIZE;
 
-                // تأخير بسيط بين الدفعات لتجنب تجاوز حد الطلبات
                 if (i < countries.length) {
                     await delay(200);
                 }
@@ -244,9 +238,8 @@
         const card = document.createElement('div');
         card.className = 'country-card';
 
-        // تخزين بيانات النص للبحث مباشرة على العنصر
         const countryNameLower = item.name.toLowerCase();
-        const citiesLower = item.cities.map(c => c.toLowerCase());
+        const citiesForSearch = item.cities.map(c => c);
         card.dataset.countryName = countryNameLower;
 
         const countryHeader = document.createElement('h3');
@@ -274,36 +267,38 @@
         card.appendChild(citiesDiv);
         dataContainer.appendChild(card);
 
-        // حفظ مرجع البطاقة مع بياناتها للبحث السريع
         allCards.push({
             card,
             countryNameLower,
-            citiesLower,
+            citiesForSearch,
             citiesDiv,
             citySpans: citiesDiv.querySelectorAll('.city-item'),
             cityCount: item.cities.length
         });
     }
 
-    // دالة البحث — تعمل بالإخفاء/الإظهار فقط دون إزالة أي عناصر
     function performSearch(term) {
-        term = term.toLowerCase().trim();
+        const termLower = term.toLowerCase().trim();
         let visibleCount = 0;
 
-        allCards.forEach(({ card, countryNameLower, citiesLower, citiesDiv, citySpans }) => {
-            if (!term) {
-                // بدون بحث: إظهار كل شيء وإزالة أي تمييز
+        allCards.forEach(({ card, countryNameLower, citiesForSearch, citySpans }) => {
+            if (!termLower) {
                 card.classList.remove('hidden');
-                citySpans.forEach(span => span.classList.remove('highlight'));
+                citySpans.forEach(span => {
+                    span.style.display = '';
+                    span.classList.remove('highlight');
+                });
                 visibleCount++;
                 return;
             }
 
-            const matchCountry = countryNameLower.includes(term);
+            const matchCountry = countryNameLower.includes(termLower);
             let matchedCityCount = 0;
 
             citySpans.forEach((span, idx) => {
-                const matches = citiesLower[idx] && citiesLower[idx].includes(term);
+                const cityText = citiesForSearch[idx] || '';
+                // البحث يدعم العربية والإنجليزية معاً
+                const matches = cityText.toLowerCase().includes(termLower) || cityText.includes(term);
                 if (matchCountry || matches) {
                     span.style.display = '';
                     span.classList.toggle('highlight', matches && !matchCountry);
@@ -328,7 +323,6 @@
         noResults.style.display = visibleCount === 0 && allCards.length > 0 ? 'block' : 'none';
     }
 
-    // بحث فوري عند كل حرف
     searchBar.addEventListener('input', function () {
         performSearch(this.value);
     });
