@@ -3,428 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الدليل الكامل لدول ومدن العالم عبر GeoNames</title>
+    <title>الدليل الكامل للمدن</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f6f9;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
+        body { font-family: sans-serif; background-color: #f4f6f9; padding: 20px; color: #333; }
         .wrapper { max-width: 1000px; margin: 0 auto; }
-        h2 { text-align: center; color: #2c3e50; margin-bottom: 5px; }
-        p.subtitle { text-align: center; color: #7f8c8d; margin-bottom: 25px; }
-        .top-controls {
-            display: flex; gap: 10px; align-items: center;
-            margin-bottom: 10px; flex-wrap: wrap;
-        }
-        .search-box {
-            flex: 1; min-width: 180px; padding: 15px 20px; font-size: 16px;
-            border: 2px solid #cbd5e1; border-radius: 30px; box-sizing: border-box;
-            outline: none; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-        }
-        .search-box:focus { border-color: #3498db; box-shadow: 0 4px 12px rgba(52,152,219,0.15); }
-        .action-btn {
-            padding: 13px 20px; font-size: 14px; font-weight: bold; color: #fff;
-            border: none; border-radius: 30px; cursor: pointer; white-space: nowrap;
-            transition: background 0.2s, transform 0.1s; display: flex; align-items: center; gap: 7px;
-        }
-        .action-btn:active { transform: scale(0.97); }
-        .action-btn:disabled { background: #95a5a6 !important; cursor: not-allowed; }
-        .action-btn svg {
-            width: 18px; height: 18px; fill: none; stroke: #fff;
-            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;
-        }
+        .top-controls { display: flex; gap: 10px; margin-bottom: 20px; }
+        .search-box { flex: 1; padding: 15px; border: 2px solid #cbd5e1; border-radius: 30px; outline: none; }
+        .action-btn { padding: 10px 20px; border: none; border-radius: 30px; cursor: pointer; color: #fff; font-weight: bold; }
         #btn-download { background: #27ae60; }
-        #btn-download:hover:not(:disabled) { background: #219a52; }
         #btn-copy { background: #2980b9; }
-        #btn-copy:hover:not(:disabled) { background: #2171a3; }
-        #btn-copy.copied { background: #16a085; }
-        #search-hint { text-align: center; font-size: 13px; color: #999; margin-bottom: 15px; }
-        #status-message {
-            text-align: center; font-size: 16px; color: #2980b9; background: #eaf2f8;
-            padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; transition: all 0.3s ease;
-        }
-        #no-results { display: none; text-align: center; color: #999; padding: 30px; font-size: 15px; }
-        #data-container { display: grid; grid-template-columns: 1fr; gap: 25px; }
-        .country-card {
-            background: #fff; padding: 25px; border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.03); border: 1px solid #e2e8f0;
-            animation: fadeIn 0.4s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        .country-name {
-            font-size: 22px; color: #2c3e50; margin-top: 0; margin-bottom: 15px;
-            border-bottom: 2px solid #3498db; padding-bottom: 8px;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .country-label { display: inline; }
-        .country-code-badge { color: #7f8c8d; font-size: 14px; margin-right: 6px; }
-        .city-count { font-size: 13px; background: #3498db; color: #fff; padding: 3px 10px; border-radius: 15px; }
-        .cities-list {
-            display: flex; flex-wrap: wrap; gap: 6px;
-            max-height: 300px; overflow-y: auto; padding-right: 5px;
-        }
-        .city-item {
-            background-color: #f8fafc; padding: 5px 10px; border-radius: 6px;
-            font-size: 13px; color: #475569; border: 1px solid #e2e8f0;
-        }
-        .city-item.highlight { background-color: #fff3cd; border-color: #ffc107; color: #856404; }
-        .cities-list::-webkit-scrollbar { width: 4px; }
-        .cities-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .country-card.hidden { display: none; }
-        .progress-bar-wrap {
-            width: 100%; background: #e2e8f0; border-radius: 10px;
-            height: 8px; margin-top: 10px; overflow: hidden; display: none;
-        }
-        .progress-bar {
-            height: 100%; background: linear-gradient(90deg, #3498db, #2ecc71);
-            border-radius: 10px; transition: width 0.3s ease; width: 0%;
-        }
+        #status-message { text-align: center; padding: 15px; margin-bottom: 20px; background: #eaf2f8; border-radius: 8px; }
+        #data-container { display: grid; gap: 20px; }
+        .country-card { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .country-name { font-size: 18px; color: #2c3e50; margin-bottom: 10px; border-bottom: 2px solid #3498db; }
+        .cities-list { display: flex; flex-wrap: wrap; gap: 5px; max-height: 200px; overflow-y: auto; }
+        .city-item { background-color: #f8fafc; padding: 5px 10px; border-radius: 6px; font-size: 12px; border: 1px solid #e2e8f0; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 <div class="wrapper">
-    <h2>الدليل الشامل لدول ومدن العالم (GeoNames)</h2>
-    <p class="subtitle">196 دولة معترف بها — مدن كاملة بالإنجليزية (بدون نقصان)</p>
-
     <div class="top-controls">
-        <input type="text" id="searchBar" class="search-box" placeholder="جاري التحميل..." disabled>
-        <button id="btn-download" class="action-btn" disabled title="تنزيل البيانات كملف JS">
-            <svg viewBox="0 0 24 24"><path d="M12 3v13M5 15l7 7 7-7M3 21h18"/></svg>
-            تنزيل
-        </button>
-        <button id="btn-copy" class="action-btn" disabled title="نسخ البيانات كاملة">
-            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            نسخ الكل
-        </button>
+        <input type="text" id="searchBar" class="search-box" placeholder="ابحث عن دولة..." disabled>
+        <button id="btn-download" class="action-btn" disabled>تنزيل</button>
+        <button id="btn-copy" class="action-btn" disabled>نسخ الكل</button>
     </div>
-    <div id="search-hint">ابدأ الكتابة للبحث الفوري — لا حاجة لضغط Enter</div>
-    <div id="status-message">جاري الاتصال بخادم GeoNames...</div>
-    <div class="progress-bar-wrap" id="progress-wrap">
-        <div class="progress-bar" id="progress-bar"></div>
-    </div>
-    <div id="no-results">لم يتم العثور على نتائج مطابقة.</div>
+    <div id="status-message">جاري الاتصال...</div>
     <div id="data-container"></div>
 </div>
 
 <script>
     const username = 'myeo';
+    const RECOGNIZED_196 = new Set(['AF','AL','DZ','AD','AO','AG','AR','AM','AU','AT','AZ','BS','BH','BD','BB','BY','BE','BZ','BJ','BT','BO','BA','BW','BR','BN','BG','BF','BI','CV','KH','CM','CA','CF','TD','CL','CN','CO','KM','CG','CD','CR','CI','HR','CU','CY','CZ','DK','DJ','DM','DO','EC','EG','SV','GQ','ER','EE','SZ','ET','FJ','FI','FR','GA','GM','GE','DE','GH','GR','GD','GT','GN','GW','GY','HT','HN','HU','IS','IN','ID','IR','IQ','IE','IL','IT','JM','JP','JO','KZ','KE','KI','KP','KR','KW','KG','LA','LV','LB','LS','LR','LY','LI','LT','LU','MG','MW','MY','MV','ML','MT','MH','MR','MU','MX','FM','MD','MC','MN','ME','MA','MZ','MM','NA','NR','NP','NL','NZ','NI','NE','NG','NO','OM','PK','PW','PA','PG','PY','PE','PH','PL','PT','QA','RO','RU','RW','KN','LC','VC','WS','SM','ST','SA','SN','RS','SC','SL','SG','SK','SI','SB','SO','ZA','SS','ES','LK','SD','SR','SE','CH','SY','TW','TJ','TZ','TH','TL','TG','TO','TT','TN','TR','TM','TV','UG','UA','AE','GB','US','UY','UZ','VU','VE','VN','YE','ZM','ZW','VA','PS','XK']);
 
-    // =============================================================
-    // رموز featureCode الخاصة بالمدن فقط (بدون قرى أو مناطق أخرى)
-    // PPLC  = عاصمة الدولة
-    // PPLA  = عاصمة إدارية من الدرجة الأولى (عاصمة مقاطعة/ولاية)
-    // PPLA2 = عاصمة إدارية من الدرجة الثانية
-    // PPLA3 = عاصمة إدارية من الدرجة الثالثة
-    // PPL   = مدينة أو مكان مأهول عام
-    // PPLX  = جزء من مدينة (حي داخل مدينة)
-    // =============================================================
-    const CITY_FEATURE_CODES = ['PPLC', 'PPLA', 'PPLA2', 'PPLA3', 'PPL', 'PPLX'];
-
-    // =============================================================
-    // قائمة الـ 196 دولة المعترف بها دولياً
-    // =============================================================
-    const RECOGNIZED_196 = new Set([
-        'AF','AL','DZ','AD','AO','AG','AR','AM','AU','AT',
-        'AZ','BS','BH','BD','BB','BY','BE','BZ','BJ','BT',
-        'BO','BA','BW','BR','BN','BG','BF','BI','CV','KH',
-        'CM','CA','CF','TD','CL','CN','CO','KM','CG','CD',
-        'CR','CI','HR','CU','CY','CZ','DK','DJ','DM','DO',
-        'EC','EG','SV','GQ','ER','EE','SZ','ET','FJ','FI',
-        'FR','GA','GM','GE','DE','GH','GR','GD','GT','GN',
-        'GW','GY','HT','HN','HU','IS','IN','ID','IR','IQ',
-        'IE','IL','IT','JM','JP','JO','KZ','KE','KI','KP',
-        'KR','KW','KG','LA','LV','LB','LS','LR','LY','LI',
-        'LT','LU','MG','MW','MY','MV','ML','MT','MH','MR',
-        'MU','MX','FM','MD','MC','MN','ME','MA','MZ','MM',
-        'NA','NR','NP','NL','NZ','NI','NE','NG','NO','OM',
-        'PK','PW','PA','PG','PY','PE','PH','PL','PT','QA',
-        'RO','RU','RW','KN','LC','VC','WS','SM','ST','SA',
-        'SN','RS','SC','SL','SG','SK','SI','SB','SO','ZA',
-        'SS','ES','LK','SD','SR','SE','CH','SY','TW','TJ',
-        'TZ','TH','TL','TG','TO','TT','TN','TR','TM','TV',
-        'UG','UA','AE','GB','US','UY','UZ','VU','VE','VN',
-        'YE','ZM','ZW',
-        'VA', 'PS', 'XK'
-    ]);
-
-    const dataContainer  = document.getElementById('data-container');
-    const statusMessage  = document.getElementById('status-message');
-    const searchBar      = document.getElementById('searchBar');
-    const noResults      = document.getElementById('no-results');
-    const btnDownload    = document.getElementById('btn-download');
-    const btnCopy        = document.getElementById('btn-copy');
-    const progressWrap   = document.getElementById('progress-wrap');
-    const progressBar    = document.getElementById('progress-bar');
-
-    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    const dataContainer = document.getElementById('data-container');
+    const statusMessage = document.getElementById('status-message');
+    const searchBar = document.getElementById('searchBar');
+    const btnDownload = document.getElementById('btn-download');
+    const btnCopy = document.getElementById('btn-copy');
     const allCards = [];
 
-    // =============================================================
-    // جلب جميع مدن دولة معينة باستخدام Pagination
-    // GeoNames يُعيد max 1000 نتيجة لكل طلب، لذا نكرر الطلبات
-    // حتى نحصل على كامل النتائج
-    // =============================================================
-    async function fetchAllCitiesForCountry(countryCode) {
-        const PAGE_SIZE = 1000;
-        let startRow = 0;
-        let allCities = [];
-        let totalResults = null;
-
-        // بناء query string لرموز المدن
-        const featureCodesParam = CITY_FEATURE_CODES.map(fc => `featureCode=${fc}`).join('&');
-
-        while (true) {
-            try {
-                const url = `https://secure.geonames.org/searchJSON?country=${countryCode}&featureClass=P&${featureCodesParam}&maxRows=${PAGE_SIZE}&startRow=${startRow}&lang=en&username=${username}`;
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (!data.geonames || data.geonames.length === 0) break;
-
-                if (totalResults === null) {
-                    totalResults = data.totalResultsCount || 0;
-                }
-
-                // تصفية: اسم إنجليزي فقط (ASCII)
-                const englishOnly = data.geonames
-                    .map(c => c.name)
-                    .filter(name => /^[\x00-\x7F\s\-'.,'()]+$/.test(name));
-
-                allCities = allCities.concat(englishOnly);
-                startRow += PAGE_SIZE;
-
-                // إذا جلبنا كل النتائج، توقف
-                if (startRow >= totalResults || data.geonames.length < PAGE_SIZE) break;
-
-                // تأخير بسيط بين الصفحات لتجنب الحظر
-                await delay(150);
-
-            } catch (err) {
-                console.warn(`Error fetching page for ${countryCode} at row ${startRow}:`, err);
-                break;
-            }
-        }
-
-        // إزالة التكرارات والترتيب
-        return [...new Set(allCities)].sort();
-    }
-
-    // =============================================================
-    // قراءة البيانات من DOM (اسم الدولة فقط بدون الاختصار)
-    // =============================================================
-    function readDataFromDOM() {
+    function getData() {
         const result = {};
         dataContainer.querySelectorAll('.country-card:not(.hidden)').forEach(card => {
-            const labelEl = card.querySelector('.country-label');
-            if (!labelEl) return;
-            const countryName = labelEl.textContent.trim();
-            const cities = [];
-            card.querySelectorAll('.city-item').forEach(span => {
-                if (span.style.display !== 'none') cities.push(span.textContent.trim());
-            });
-            result[countryName] = cities;
+            const name = card.querySelector('.country-name').textContent.replace(/\(.*?\)/, '').trim();
+            const cities = Array.from(card.querySelectorAll('.city-item')).map(el => el.textContent);
+            result[name] = cities;
         });
-        return result;
+        return JSON.stringify(result, null, 4);
     }
 
-    function buildFileContent(data) {
-        const lines = ['const countriesAndCities = {'];
-        const entries = Object.entries(data);
-        entries.forEach(([country, cities], idx) => {
-            const comma = idx < entries.length - 1 ? ',' : '';
-            lines.push(`    ${JSON.stringify(country)}: ${JSON.stringify(cities)}${comma}`);
-        });
-        lines.push('};');
-        return lines.join('\n');
-    }
-
-    async function loadGeoNamesDatabase() {
+    async function init() {
         try {
-            const countriesUrl = `https://secure.geonames.org/countryInfoJSON?username=${username}`;
-            const response = await fetch(countriesUrl);
-            const data = await response.json();
-            if (!data.geonames) throw new Error('فشل جلب الدول');
-
-            const countries = data.geonames
-                .filter(c => RECOGNIZED_196.has(c.countryCode))
-                .sort((a, b) => a.countryName.localeCompare(b.countryName));
-
+            const res = await fetch(`https://secure.geonames.org/countryInfoJSON?username=${username}`);
+            const data = await res.json();
+            const countries = data.geonames.filter(c => RECOGNIZED_196.has(c.countryCode)).sort((a, b) => a.countryName.localeCompare(b.countryName));
+            
             searchBar.disabled = false;
-            searchBar.placeholder = "ابدأ الكتابة للبحث الفوري...";
-            progressWrap.style.display = 'block';
-
-            // معالجة كل دولة واحدة تلو الأخرى لضمان جلب كامل (لتجنب ضغط API)
-            for (let i = 0; i < countries.length; i++) {
-                const country = countries[i];
-                const percent = Math.round(((i) / countries.length) * 100);
-                progressBar.style.width = percent + '%';
-                statusMessage.textContent =
-                    `[${i + 1}/${countries.length}] جاري جلب مدن: ${country.countryName}...`;
-
-                const cities = await fetchAllCitiesForCountry(country.countryCode);
-                appendCountryCard({ name: country.countryName, code: country.countryCode, cities });
-
-                // تأخير بسيط بين الدول
-                await delay(100);
+            for (const country of countries) {
+                statusMessage.textContent = `جاري تحميل: ${country.countryName}`;
+                const cRes = await fetch(`https://secure.geonames.org/searchJSON?country=${country.countryCode}&featureClass=P&maxRows=1000&lang=en&username=${username}`);
+                const cData = await cRes.json();
+                const cities = [...new Set(cData.geonames.map(c => c.name))].sort();
+                
+                const card = document.createElement('div');
+                card.className = 'country-card';
+                card.innerHTML = `<div class="country-name">${country.countryName}</div><div class="cities-list">${cities.map(c => `<span class="city-item">${c}</span>`).join('')}</div>`;
+                dataContainer.appendChild(card);
+                allCards.push({ card, name: country.countryName.toLowerCase() });
             }
-
-            progressBar.style.width = '100%';
-            statusMessage.style.background = '#d4edda';
-            statusMessage.style.color = '#155724';
-            const totalCities = allCards.reduce((sum, c) => sum + c.citySpans.length, 0);
-            statusMessage.textContent = `🎉 اكتمل التحميل! ${allCards.length} دولة — ${totalCities.toLocaleString()} مدينة`;
+            statusMessage.textContent = "تم التحميل بنجاح";
             btnDownload.disabled = false;
             btnCopy.disabled = false;
-
-        } catch (error) {
-            console.error(error);
-            statusMessage.textContent = 'حدث خطأ. يرجى التأكد من أن حساب GeoNames مفعّل.';
-            statusMessage.style.background = '#f2dede';
-            statusMessage.style.color = '#a94442';
-        }
+        } catch (e) { statusMessage.textContent = "خطأ في الاتصال"; }
     }
 
-    function appendCountryCard(item) {
-        const card = document.createElement('div');
-        card.className = 'country-card';
-
-        const countryNameLower = item.name.toLowerCase();
-        const citiesLower = item.cities.map(c => c.toLowerCase());
-
-        const countryHeader = document.createElement('h3');
-        countryHeader.className = 'country-name';
-
-        const leftSpan = document.createElement('span');
-
-        const labelSpan = document.createElement('span');
-        labelSpan.className = 'country-label';
-        labelSpan.textContent = item.name;
-
-        const codeSpan = document.createElement('small');
-        codeSpan.className = 'country-code-badge';
-        codeSpan.textContent = `(${item.code})`;
-        codeSpan.setAttribute('translate', 'no');
-
-        leftSpan.appendChild(labelSpan);
-        leftSpan.appendChild(codeSpan);
-
-        const countBadge = document.createElement('span');
-        countBadge.className = 'city-count';
-        countBadge.textContent = `${item.cities.length} مدينة`;
-
-        countryHeader.appendChild(leftSpan);
-        countryHeader.appendChild(countBadge);
-        card.appendChild(countryHeader);
-
-        const citiesDiv = document.createElement('div');
-        citiesDiv.className = 'cities-list';
-
-        if (item.cities.length > 0) {
-            item.cities.forEach(city => {
-                const citySpan = document.createElement('span');
-                citySpan.className = 'city-item';
-                citySpan.textContent = city;
-                citiesDiv.appendChild(citySpan);
-            });
-        } else {
-            citiesDiv.innerHTML = '<em style="color:#aaa;font-size:13px;padding:5px;">لا توجد مدن متوفرة</em>';
-        }
-
-        card.appendChild(citiesDiv);
-        dataContainer.appendChild(card);
-
-        allCards.push({
-            card, countryNameLower, citiesLower,
-            citySpans: citiesDiv.querySelectorAll('.city-item')
-        });
-    }
-
-    function flashButton(btn, tempHTML, tempClass, ms) {
-        btn.classList.add(tempClass);
-        const orig = btn.innerHTML;
-        btn.innerHTML = tempHTML;
-        setTimeout(() => { btn.innerHTML = orig; btn.classList.remove(tempClass); }, ms);
-    }
-
-    const CHECK_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-
-    btnDownload.addEventListener('click', function () {
-        const content = buildFileContent(readDataFromDOM());
-        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url; a.download = 'countries_and_cities.js';
-        document.body.appendChild(a); a.click();
-        document.body.removeChild(a); URL.revokeObjectURL(url);
+    btnDownload.addEventListener('click', () => {
+        const blob = new Blob([getData()], { type: 'application/json' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'data.json'; a.click();
     });
 
-    btnCopy.addEventListener('click', async function () {
-        const content = buildFileContent(readDataFromDOM());
-        const doFlash = () => flashButton(btnCopy, `${CHECK_SVG} تم النسخ!`, 'copied', 2500);
-        try {
-            await navigator.clipboard.writeText(content);
-            doFlash();
-        } catch (err) {
-            const ta = document.createElement('textarea');
-            ta.value = content;
-            ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
-            document.body.appendChild(ta);
-            ta.focus(); ta.select();
-            try { document.execCommand('copy'); } catch(e) {}
-            document.body.removeChild(ta);
-            doFlash();
-        }
+    btnCopy.addEventListener('click', () => navigator.clipboard.writeText(getData()));
+
+    searchBar.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        allCards.forEach(c => c.card.classList.toggle('hidden', !c.name.includes(term)));
     });
 
-    function performSearch(term) {
-        term = term.toLowerCase().trim();
-        let visibleCount = 0;
-
-        allCards.forEach(({ card, countryNameLower, citiesLower, citySpans }) => {
-            if (!term) {
-                card.classList.remove('hidden');
-                citySpans.forEach(s => { s.style.display = ''; s.classList.remove('highlight'); });
-                visibleCount++;
-                return;
-            }
-
-            const matchCountry = countryNameLower.includes(term);
-            let matchedCityCount = 0;
-
-            citySpans.forEach((span, idx) => {
-                const matches = citiesLower[idx] && citiesLower[idx].includes(term);
-                if (matchCountry || matches) {
-                    span.style.display = '';
-                    span.classList.toggle('highlight', matches && !matchCountry);
-                    matchedCityCount++;
-                } else if (!matchCountry) {
-                    span.style.display = 'none';
-                    span.classList.remove('highlight');
-                } else {
-                    span.style.display = '';
-                    span.classList.remove('highlight');
-                }
-            });
-
-            if (matchCountry || matchedCityCount > 0) {
-                card.classList.remove('hidden');
-                visibleCount++;
-            } else {
-                card.classList.add('hidden');
-            }
-        });
-
-        noResults.style.display = visibleCount === 0 && allCards.length > 0 ? 'block' : 'none';
-    }
-
-    searchBar.addEventListener('input', function () { performSearch(this.value); });
-    window.onload = loadGeoNamesDatabase;
+    init();
 </script>
 </body>
 </html>
