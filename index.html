@@ -104,10 +104,6 @@
 <script>
     const username = 'myeo';
 
-    // ============================================================
-    // قائمة ISO-3166-1 alpha-2 للـ 196 دولة المعترف بها دولياً
-    // (193 عضو في الأمم المتحدة + الفاتيكان + فلسطين + كوسوفو)
-    // ============================================================
     const RECOGNIZED_196 = new Set([
         'AF','AL','DZ','AD','AO','AG','AR','AM','AU','AT',
         'AZ','BS','BH','BD','BB','BY','BE','BZ','BJ','BT',
@@ -129,9 +125,7 @@
         'TZ','TH','TL','TG','TO','TT','TN','TR','TM','TV',
         'UG','UA','AE','GB','US','UY','UZ','VU','VE','VN',
         'YE','ZM','ZW',
-        'VA',  // الفاتيكان
-        'PS',  // فلسطين
-        'XK'   // كوسوفو (رمز غير رسمي لكنه مستخدم على نطاق واسع)
+        'VA','PS','XK'
     ]);
 
     const dataContainer = document.getElementById('data-container');
@@ -144,21 +138,22 @@
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     const allCards = [];
 
-    // ======= قراءة البيانات الحية من DOM (تدعم ترجمة المتصفح) =======
+    // ======= قراءة البيانات من DOM — اسم الدولة فقط بدون الاختصار =======
     function readDataFromDOM() {
         const result = {};
         dataContainer.querySelectorAll('.country-card:not(.hidden)').forEach(card => {
             const labelEl = card.querySelector('.country-label');
-            const codeEl  = card.querySelector('.country-code-badge');
             if (!labelEl) return;
+
+            // الاسم فقط — بدون كود الدولة
             const countryName = labelEl.textContent.trim();
-            const countryCode = codeEl ? codeEl.textContent.replace(/[()]/g, '').trim() : '';
-            const key = countryCode ? `${countryName} (${countryCode})` : countryName;
+
             const cities = [];
             card.querySelectorAll('.city-item').forEach(span => {
                 if (span.style.display !== 'none') cities.push(span.textContent.trim());
             });
-            result[key] = cities;
+
+            result[countryName] = cities;
         });
         return result;
     }
@@ -182,7 +177,6 @@
             const data = await response.json();
             if (!data.geonames) throw new Error('فشل جلب الدول');
 
-            // *** تصفية: فقط الـ 196 دولة المعترف بها ***
             const countries = data.geonames
                 .filter(c => RECOGNIZED_196.has(c.countryCode))
                 .sort((a, b) => a.countryName.localeCompare(b.countryName));
@@ -248,14 +242,17 @@
 
         const leftSpan = document.createElement('span');
 
+        // اسم الدولة — قابل للترجمة
         const labelSpan = document.createElement('span');
         labelSpan.className = 'country-label';
         labelSpan.textContent = item.name;
 
+        // الاختصار — للعرض فقط، محمي من الترجمة، لا يُنسخ ولا يُنزَّل
         const codeSpan = document.createElement('small');
         codeSpan.className = 'country-code-badge';
         codeSpan.textContent = `(${item.code})`;
         codeSpan.setAttribute('translate', 'no');
+        codeSpan.setAttribute('aria-hidden', 'true'); // لا معنى له للقارئات
 
         leftSpan.appendChild(labelSpan);
         leftSpan.appendChild(codeSpan);
